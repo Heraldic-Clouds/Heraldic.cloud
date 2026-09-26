@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeLayout, defaultLayout, safePalette, defaultPalette, safeCopy, forbiddenRequest } from '../lambda/design.mjs';
+import { safeLayout, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safePalette, defaultPalette, safeCopy, forbiddenRequest } from '../lambda/design.mjs';
 import { handler } from '../lambda/index.mjs';
 test('layout accepts only complete finite presentation options', () => {
   assert.deepEqual(safeLayout(defaultLayout), defaultLayout);
@@ -11,6 +11,27 @@ test('palette rejects unreadable colors and executable values', () => {
   assert.equal(safePalette({ ...defaultPalette, text: '#ffffff' }), null);
   assert.equal(safePalette({ ...defaultPalette, page: 'url(evil)' }), null);
   assert.deepEqual(safeCopy({ title: '<script>alert(1)</script>', unknown: 'bad' }, { title: 'good' }), {});
+});
+test('successive layout patches survive browser serialization without resetting earlier choices', () => {
+  const first = mergeLayout(defaultLayout, { density: 'airy', cards: 'two-column', hero: 'logo-right' });
+  const second = mergeLayout(first, { typography: 'serif', density: null, cards: null });
+  const restored = restoreLayout(JSON.parse(JSON.stringify(second)));
+  assert.equal(restored.density, 'airy');
+  assert.equal(restored.cards, 'two-column');
+  assert.equal(restored.hero, 'logo-right');
+  assert.equal(restored.typography, 'serif');
+  assert.deepEqual(mergeLayout(second, { page: '/evil', density: 'compact' }), second);
+  assert.equal(safeLayoutPatch(JSON.parse('{"__proto__":{"polluted":true},"cards":"list"}')), null);
+  assert.deepEqual(restoreLayout({ density: 'compact', cards: 'list' }), { ...defaultLayout, density: 'compact', cards: 'list' });
+});
+test('new-page refusals handle whitespace and hidden characters without blocking normal spacing requests', () => {
+  for (const prompt of ['add\na new\npage', 'add a ne\u200bw page', 'create a landing page']) assert.equal(forbiddenRequest(prompt), true);
+  assert.equal(forbiddenRequest('Add generous spacing to the page'), false);
+});
+test('visitor wording maps to safe layout patches before an AI response arrives', () => {
+  assert.deepEqual(inferLayoutPatch('make it look like Apple standards with airy spacing and a logo on the right'), { density: 'airy', hero: 'logo-right' });
+  assert.deepEqual(inferLayoutPatch('use serif type and two columns'), { typography: 'serif', cards: 'two-column' });
+  assert.equal(inferLayoutPatch('add a new page with an iframe'), null);
 });
 test('malicious and new-page requests cannot reach the model', async () => {
   for (const message of ['add a new page', 'create pages', 'disable security', 'hide privacy', 'add cookies', 'add javascript']) {
@@ -63,6 +84,7 @@ test('Lambda redirects large PDFs to configured HTTPS storage without cookies', 
 });
 test('cross-site API calls and traversal fail closed', async () => {
   assert.equal((await handler({ rawPath: '/api/chat', httpMethod: 'POST', headers: { 'sec-fetch-site': 'cross-site' } })).statusCode, 403);
+  assert.equal((await handler({ rawPath: '/api/chat', httpMethod: 'POST', headers: { origin: 'https://evil.example' } })).statusCode, 403);
   assert.equal((await handler({ rawPath: '/%2e%2e/.env.local' })).statusCode, 400);
 });
 test('model output is validated and saved visitor designs are never forwarded', async () => {
@@ -79,12 +101,16 @@ test('model output is validated and saved visitor designs are never forwarded', 
   const call = async () => JSON.parse((await handler({ rawPath: '/api/chat', httpMethod: 'POST', clientIp: 'model-test', body: JSON.stringify({ message: 'Use a list layout', siteCopy: { heroTitle: 'private-saved-design' } }) })).body);
   try {
     assert.equal((await call()).layout.cards, 'list');
+    modelResult.layout = { typography: 'mono', density: null, cards: null };
+    assert.deepEqual((await call()).layout, { typography: 'mono' });
     modelResult.layout = { ...defaultLayout, script: 'alert(1)' };
     assert.equal((await call()).layout, null);
     modelResult = { action: 'refuse', reply: 'No', layout: defaultLayout, theme: defaultPalette, siteCopy: { heroTitle: 'unwanted' } };
     const refused = await call();
     assert.equal(refused.theme, null);
     assert.deepEqual(refused.siteCopy, {});
+    modelResult = null;
+    assert.match((await call()).error, /invalid response/);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey;

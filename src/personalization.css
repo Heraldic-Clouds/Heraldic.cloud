@@ -56,3 +56,26 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
   .keyboard-footer-line { font-size: .52rem; line-height: 1.4; }
 }
 @media (prefers-reduced-motion: reduce) { *, .screen-scroll { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Visitor choices remain within responsive, accessible presentation rules. */
+.screen-scroll :is(.screen-section, .home-mission > *) { min-width: 0; overflow-wrap: anywhere; }
+[data-alignment="left"] .screen-section { text-align: left; }
+[data-alignment="center"] .screen-section { text-align: center; }
+[data-alignment="left"] .home-mission { align-items: flex-start; }
+[data-alignment="left"] .home-mission .screen-actions { justify-content: flex-start; }
+[data-alignment="center"] .screen-section :is(.screen-actions, .lede) { justify-content: center; margin-inline: auto; }
+[data-textscale="large"] .screen-scroll :is(p, li, figcaption) { font-size: 1.05rem; line-height: 1.7; }
+[data-textscale="large"] .screen-scroll h3 { font-size: 1.3rem; }
+[data-logosize="small"] .mission-logo { width: 140px; max-width: 100%; }
+[data-logosize="large"] .mission-logo { width: clamp(240px, 32vw, 400px); max-width: 100%; }
+@media (min-width: 721px) {
+  [data-cards="two-column"] :is(.capability-grid, .system-grid, .mea-feature-grid, .media-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-stage:is([data-hero="split"], [data-hero="logo-right"]) .home-mission { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); align-items: center; gap: 1.5rem 2rem; }
+  .desk-stage:is([data-hero="split"], [data-hero="logo-right"]) .home-mission h1 { grid-column: 1 / -1; justify-self: center; }
+  .desk-stage:is([data-hero="split"], [data-hero="logo-right"]) .home-mission .mission-logo { grid-column: 1; grid-row: 2 / 4; justify-self: center; }
+  .desk-stage:is([data-hero="split"], [data-hero="logo-right"]) .mission-intro { grid-column: 2; grid-row: 2; }
+  .desk-stage:is([data-hero="split"], [data-hero="logo-right"]) .home-mission .screen-actions { grid-column: 2; grid-row: 3; }
+  .desk-stage[data-hero="logo-right"] .home-mission { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  .desk-stage[data-hero="logo-right"] .home-mission .mission-logo { grid-column: 2; }
+  .desk-stage[data-hero="logo-right"] .home-mission :is(.mission-intro, .screen-actions) { grid-column: 1; }
+}

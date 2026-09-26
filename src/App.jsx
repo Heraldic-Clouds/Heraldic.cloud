@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import siteCopy from './site-copy.json';
-import { defaultPalette, paletteKeys, safePalette, safeLayout, defaultLayout, safeCopy, foreground } from '../lambda/design.mjs';
+import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safeCopy, foreground } from '../lambda/design.mjs';
 
 const keys = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -29,13 +29,14 @@ export default function App({ page = 'home' }) {
   const [error, setError] = useState('');
   const [layout, setLayout] = useState(defaultLayout);
   const [loaded, setLoaded] = useState(false);
+  const [previousDesign, setPreviousDesign] = useState(null);
   const [storageNotice, setStorageNotice] = useState('Design saved only in this browser. No cookies.');
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
       if (saved?.version === 1) {
         setTheme(safePalette(saved.theme));
-        setLayout(safeLayout(saved.layout) || defaultLayout);
+        setLayout(restoreLayout(saved.layout));
         const edits = safeCopy(saved.copy, siteCopy);
         for (const [key, value] of Object.entries(previousDefaults)) if (edits[key] === value) delete edits[key];
         setCopy({ ...siteCopy, ...edits });
@@ -51,7 +52,11 @@ export default function App({ page = 'home' }) {
       else localStorage.setItem(storageKey, JSON.stringify({ version: 1, theme, layout, copy: Object.fromEntries(Object.entries(copy).filter(([key, value]) => siteCopy[key] !== value)) }));
     } catch { setStorageNotice('Browser storage unavailable. Changes last for this visit only. No cookies.'); }
   }, [copy, theme, layout, loaded]);
-  const resetDesign = () => { setTheme(null); setLayout(defaultLayout); setCopy(siteCopy); };
+  const resetDesign = () => { setTheme(null); setLayout(defaultLayout); setCopy(siteCopy); setPreviousDesign(null); };
+  const undoDesign = () => {
+    if (!previousDesign || busy) return;
+    setTheme(previousDesign.theme); setLayout(previousDesign.layout); setCopy(previousDesign.copy); setPreviousDesign(null);
+  };
 
   useEffect(() => {
     if (promptOpen) promptRef.current?.focus();
@@ -85,6 +90,11 @@ export default function App({ page = 'home' }) {
     setPrompt('');
     setError('');
     setBusy(true);
+    const inferredLayout = inferLayoutPatch(text);
+    if (inferredLayout) {
+      setPreviousDesign({ theme, layout, copy });
+      setLayout(current => mergeLayout(current, inferredLayout));
+    }
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -94,16 +104,21 @@ export default function App({ page = 'home' }) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Artem AI is unavailable for a moment. Please try again shortly.');
+      const checkedLayout = result.layout == null ? null : safeLayoutPatch(result.layout);
+      const checkedTheme = result.theme == null ? null : safePalette(result.theme);
+      if ((result.layout != null && !checkedLayout) || (result.theme != null && !checkedTheme)) throw new Error('That design could not be applied safely. Your current design has been kept.');
+      const checkedCopy = safeCopy(result.siteCopy, siteCopy);
+      if (checkedLayout || checkedTheme || Object.keys(checkedCopy).length) setPreviousDesign({ theme, layout, copy });
       setMessages((current) => [...current, { role: 'assistant', text: result.reply }].slice(-9));
       if (result.siteCopy && Object.keys(result.siteCopy).length) {
-        setCopy((current) => ({ ...current, ...safeCopy(result.siteCopy, siteCopy) }));
+        setCopy((current) => ({ ...current, ...checkedCopy }));
         if (result.siteCopy.welcomeMessage) {
           setMessages((current) => current.map((item, index) => index === 0 && item.role === 'assistant' ? { ...item, text: result.siteCopy.welcomeMessage } : item));
         }
         screenRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      if (safePalette(result.theme)) setTheme(safePalette(result.theme));
-      if (safeLayout(result.layout)) setLayout(safeLayout(result.layout));
+      if (checkedTheme) setTheme(checkedTheme);
+      if (checkedLayout) setLayout(current => mergeLayout(current, checkedLayout));
     } catch (cause) {
       setError(cause.message || 'Could not reach Artem AI. Please try again.');
     } finally {
@@ -189,7 +204,7 @@ export default function App({ page = 'home' }) {
               <div className="key-row bottom-row"><button className="utility-key" onClick={() => typeKey('⌫')} aria-label="Delete last character">⌫</button><button className="wide-key" onClick={() => typeKey('SPACE')}>SPACE</button><button className="utility-key" onClick={() => promptOpen ? sendMessage({ preventDefault() {} }) : setPromptOpen(true)} aria-label={promptOpen ? 'Send prompt' : 'Open prompt'}>↵</button></div>
             </div>
           </div>
-          <div className="keyboard-footer-line"><span>{translatedFooter}</span><span>{storageNotice} <button type="button" onClick={resetDesign}>Reset design</button></span></div>
+          <div className="keyboard-footer-line"><span>{translatedFooter}</span><span>{storageNotice} {previousDesign && <button type="button" disabled={busy} onClick={undoDesign}>Undo design</button>} <button type="button" disabled={busy} onClick={resetDesign}>Reset design</button></span></div>
         </div>
       </footer>
     </main>

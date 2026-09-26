@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { defaultPalette, paletteKeys, safePalette, safeLayout, layoutOptions, safeCopy, forbiddenRequest, refusal } from './design.mjs';
+import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, layoutOptions, safeCopy, forbiddenRequest, refusal } from './design.mjs';
 
 const moduleDirectory = fileURLToPath(new URL('.', import.meta.url));
 export const distDirectory = await readFile(resolve(moduleDirectory, 'dist/index.html')).then(() => resolve(moduleDirectory, 'dist')).catch(() => resolve(moduleDirectory, '../dist'));
@@ -19,7 +19,7 @@ const contentTypes = {
 export const securityHeaders = {
   'Content-Security-Policy': "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests",
   'Referrer-Policy': 'no-referrer', 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-  'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
+  'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cross-Origin-Opener-Policy': 'same-origin', 'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
 };
 const rateWindowMs = 60_000;
 const rateLimit = 8;
@@ -98,7 +98,7 @@ const outputSchema = {
   properties: {
     reply: { type: 'string' },
     action: { type: 'string', enum: ['reply', 'customize', 'refuse'] },
-    layout: { type: ['object', 'null'], additionalProperties: false, properties: Object.fromEntries(Object.entries(layoutOptions).map(([key, values]) => [key, { type: 'string', enum: values }])), required: Object.keys(layoutOptions) },
+    layout: { type: ['object', 'null'], additionalProperties: false, properties: Object.fromEntries(Object.entries(layoutOptions).map(([key, values]) => [key, { type: ['string', 'null'], enum: [...values, null] }])), required: Object.keys(layoutOptions) },
     siteCopy: {
       type: 'object', additionalProperties: false,
       properties: Object.fromEntries(siteCopyKeys.map((key) => [key, { type: ['string', 'null'] }])),
@@ -122,6 +122,8 @@ function extractOutputText(response) {
 }
 
 async function chatHandler(event) {
+  const origin = event.headers?.origin || event.headers?.Origin;
+  if (origin && !/^https?:\/\/localhost(?::\d+)?$/.test(origin) && !/^https?:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin) && !/^https:\/\/www\.heraldic\.cloud$/.test(origin)) return jsonResponse(403, { error: 'This request origin is not allowed.' });
   if (event.headers?.['sec-fetch-site'] === 'cross-site') return jsonResponse(403, { error: 'Cross-site requests are not allowed.' });
   const address = getClientIp(event);
   if (isRateLimited(address)) return jsonResponse(429, { error: 'Please wait a moment before sending another message.' }, { 'Retry-After': '60' });
@@ -147,7 +149,7 @@ async function chatHandler(event) {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-6-luna',
-        instructions: instructions + safetyInstructions,
+        instructions: instructions + safetyInstructions + ` Layout is a PATCH: set every unrequested layout field to null so previous browser preferences survive. Use density for spacing; width for content width; typography for font family; cards for grid/list/two-column; hero stacked for logo above mission, split for logo left of mission, logo-right for logo right; corners; alignment; textscale standard/large; logosize small/standard/large. Return only controls explicitly requested in the latest message, not previous requests in history. When a requested layout is outside these supported controls, explain the available options and do not claim it was applied. Never return new pages, credentials forms, invisible text, flashing effects, arbitrary positioning or arbitrary code.`,
         input,
         max_output_tokens: 3500,
         store: false,
@@ -165,6 +167,7 @@ async function chatHandler(event) {
   const outputText = extractOutputText(responseData);
   let result;
   try { result = JSON.parse(outputText); } catch { return jsonResponse(502, { error: 'Artem AI could not format its response. Please try again.' }); }
+  if (!result || typeof result !== 'object' || Array.isArray(result) || !['customize', 'reply', 'refuse'].includes(result.action)) return jsonResponse(502, { error: 'Artem AI returned an invalid response. Please try again.' });
 
   if (result.action !== 'customize') return jsonResponse(200, { reply: result.action === 'refuse' ? refusal : String(result.reply || 'Welcome to Heraldic.').slice(0, 1800), siteCopy: {}, theme: null, layout: null });
   const changedCopy = {};
@@ -174,7 +177,7 @@ async function chatHandler(event) {
     }
   }
   const theme = safePalette(result.theme);
-  const layout = safeLayout(result.layout);
+  const layout = safeLayoutPatch(result.layout);
   if ((result.theme && !theme) || (result.layout && !layout)) return jsonResponse(200, { reply: 'That design could compromise readability or uses unsupported layout controls. Please choose a readable palette or a supported layout.', siteCopy: {}, theme: null, layout: null });
   const reply = typeof result.reply === 'string' ? result.reply.trim().slice(0, 1800) : '';
   return jsonResponse(200, { reply: reply || 'Your browser-local design is ready.', siteCopy: safeCopy(changedCopy, siteCopyTemplate), theme, layout });
