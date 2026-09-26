@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Heraldic privacy-first React website
+Parameters:
+  MediaBaseUrl:
+    Type: String
+    AllowedPattern: 'https://[^?#]+'
+    Description: HTTPS S3/CDN directory containing the two original poster PDFs (include trailing slash).
+  OpenAISecretArn:
+    Type: String
+    Description: ARN of an AWS Secrets Manager secret containing the OpenAI API key.
+Resources:
+  HeraldicSiteFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: .
+      Handler: index.handler
+      Runtime: nodejs22.x
+      MemorySize: 256
+      Timeout: 30
+      Architectures: [arm64]
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Sub '{{resolve:secretsmanager:${OpenAISecretArn}:SecretString}}'
+          OPENAI_MODEL: gpt-6-luna
+          MEDIA_BASE_URL: !Ref MediaBaseUrl
+      Events:
+        SiteRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HeraldicApi
+            Path: /
+            Method: ANY
+        SiteProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HeraldicApi
+            Path: /{proxy+}
+            Method: ANY
+  HeraldicApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+Outputs:
+  HeraldicUrl:
+    Description: Public site URL
+    Value: !Sub 'https://${HeraldicApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/'

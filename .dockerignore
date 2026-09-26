@@ -1,0 +1,25 @@
+node_modules
+.prerender
+dist
+.env
+.env.*
+.git
+.aws-sam
+Full website
+html
+CompTIA A+ ce logo
+CompTIA Cloud+ ce logo
+*.jpg
+!public/mea/*.jpg
+*.gif
+*.zip
+*.war
+*.apk
+*.pdf
+!public/media/*.pdf
+*.psd
+*.so
+*.key
+Thumbs.db
+wp-config*
+README.md

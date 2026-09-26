@@ -1,0 +1,17 @@
+node_modules/
+.prerender/
+dist/
+.aws-sam/
+.env
+.env.*
+!.env.example
+.aws/
+.npmrc
+*.pem
+*.p12
+*.pfx
+*.key
+credentials
+credentials.*
+secrets.*
+terraform.tfstate*
