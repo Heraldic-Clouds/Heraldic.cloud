@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { safeLayout, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safePalette, defaultPalette, safeCopy, forbiddenRequest } from '../lambda/design.mjs';
+import { PROMPT_MAX_LENGTH, containsLink, validatePrompt } from '../lambda/prompt.mjs';
 import { handler } from '../lambda/index.mjs';
 test('layout accepts only complete finite presentation options', () => {
   assert.deepEqual(safeLayout(defaultLayout), defaultLayout);
@@ -28,6 +29,17 @@ test('new-page refusals handle whitespace and hidden characters without blocking
   for (const prompt of ['add\na new\npage', 'add a ne\u200bw page', 'create a landing page']) assert.equal(forbiddenRequest(prompt), true);
   assert.equal(forbiddenRequest('Add generous spacing to the page'), false);
 });
+test('AI prompts are short and cannot contain links', async () => {
+  assert.equal(PROMPT_MAX_LENGTH, 400);
+  assert.equal(validatePrompt('Adjust the spacing and use a larger logo.'), '');
+  assert.equal(containsLink('Visit https://example.com for details.'), true);
+  assert.equal(containsLink('Try www.example.com or example.com.'), true);
+  assert.match(validatePrompt('a'.repeat(PROMPT_MAX_LENGTH + 1)), /400 characters/);
+  assert.match(validatePrompt('Use this link: https://example.com'), /Links are not allowed/);
+  const result = await handler({ rawPath: '/api/chat', httpMethod: 'POST', clientIp: 'prompt-validation-test', body: JSON.stringify({ message: 'Visit https://example.com' }) });
+  assert.equal(result.statusCode, 400);
+  assert.match(JSON.parse(result.body).error, /Links are not allowed/);
+});
 test('visitor wording maps to safe layout patches before an AI response arrives', () => {
   assert.deepEqual(inferLayoutPatch('make it look like Apple standards with airy spacing and a logo on the right'), { density: 'airy', hero: 'logo-right' });
   assert.deepEqual(inferLayoutPatch('use serif type and two columns'), { typography: 'serif', cards: 'two-column' });
@@ -51,6 +63,8 @@ test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 40
     if (['/', '/mea/', '/media/'].includes(path)) {
       assert.match(result.body, /<h1/);
       assert.match(result.body, /rel="canonical"/);
+      assert.match(result.body, /property="og:title"/);
+      assert.match(result.body, /name="twitter:title"/);
       assert.match(result.body, /application\/ld\+json/);
       assert.match(result.headers['Content-Security-Policy'], /sha256-/);
     }
@@ -58,15 +72,41 @@ test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 40
 });
 test('mission, media links and removed monitor label are prerendered', async () => {
   const home = (await handler({ rawPath: '/' })).body;
-  assert.match(home, /Nothing Is Impossible/);
-  assert.match(home, /PeopleWelcome/);
-  assert.match(home, /artificial general intelligence/);
+  assert.match(home, /Nothing is impossible/);
+  assert.match(home, /Our mission is to democratize technology and ensure prosperety for all humanity/);
+  assert.match(home, /free, democratized, humane AI/);
+  assert.match(home, /pioneering AI governance solutions|pioneer company in AI governance solutions/);
+  assert.match(home, /HERALDIC2026\.png/);
   assert.match(home, /class="mission-logo"/);
+  assert.match(home, /class="keyboard-body chat-open"/);
+  assert.match(home, /id="artem-prompt"/);
+  assert.match(home, /This site is not tracking you/);
+  assert.match(home, /keyboard-close/);
+  assert.doesNotMatch(home, /Heraldic’s stated values/);
+  assert.doesNotMatch(home, /ARTEM AI · HERALDIC CEO PERSONA/);
+  assert.ok(home.indexOf('id="about"') < home.indexOf('id="privacy"'));
+  assert.doesNotMatch(home, /We build open, distributed, privacy-respecting technology for humanity/);
+  assert.doesNotMatch(home, />How it works</);
+  assert.doesNotMatch(home, />Systems</);
+  assert.doesNotMatch(home, /id="how-it-works"/);
+  assert.doesNotMatch(home, /id="systems"/);
   assert.doesNotMatch(home, /class="screen-footer"><span>HERALDIC/);
+  const mea = (await handler({ rawPath: '/mea/' })).body;
+  assert.match(mea, /id="how-it-works"/);
+  assert.match(mea, /id="systems"/);
   const media = (await handler({ rawPath: '/media/' })).body;
   assert.match(media, /GTC2017MEAposter\.pdf/);
   assert.match(media, /Mise_En_Abyme_Cloud_Primary_personal_Computers\.pdf/);
+  assert.match(media, /presented at NVIDIA GTC/);
+  assert.doesNotMatch(media, /original|historical|archive/i);
   assert.doesNotMatch(media, /<iframe|<object/);
+});
+test('MEA presents current offerings without removed historical graphics', async () => {
+  const mea = (await handler({ rawPath: '/mea/' })).body;
+  assert.doesNotMatch(mea, /a-plus-certified|cloudplus-certified|mea-art\.jpg/);
+  assert.doesNotMatch(mea, /archived rendering|feature statements below preserve|former product lineup|original|legacy/i);
+  assert.match(mea, /Mise En Abyme is a desktop experience/);
+  assert.match(mea, /Three paths into the cloud/);
 });
 test('Lambda redirects large PDFs to configured HTTPS storage without cookies', async () => {
   const old = process.env.MEDIA_BASE_URL;

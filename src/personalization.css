@@ -22,6 +22,11 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .keyboard-footer-line { flex-wrap: wrap; gap: .25rem .7rem; }
 .keyboard-footer-line span { white-space: normal; overflow: visible; }
 .keyboard-footer-line button { font-size: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 3px; cursor: pointer; }
+.keyboard-topline { justify-content: flex-end; }
+.keyboard-close { width: 1.4rem; height: 1.4rem; padding: 0; border: 1px solid currentColor; border-radius: 50%; color: inherit; background: transparent; cursor: pointer; font-size: 1rem; line-height: 1; }
+.keyboard-close:hover { background: rgba(255,255,255,.14); }
+.keyboard-reopen { position: fixed; right: 1rem; bottom: 1rem; z-index: 4; padding: .55rem .8rem; border: 1px solid #407f95; border-radius: 6px; color: #e5f8fc; background: #1a526a; cursor: pointer; font-size: .7rem; }
+.keyboard-reopen:hover { background: #267997; }
 [data-density="compact"] .screen-section { padding-block: 1.5rem; }
 [data-density="airy"] .screen-section { padding-block: clamp(3rem, 7vw, 6rem); }
 [data-width="focused"] .screen-section { max-width: 900px; margin-inline: auto; }
@@ -40,7 +45,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .desk-stage :is(.focus-card, .system-card, .capability-grid article, .mea-feature-grid article) { background: var(--palette-card, #fff); }
 .desk-stage :is(.focus-card p, .mea-intro, figcaption) { color: var(--palette-muted, #426b7e); }
 .desk-stage .screen-scroll :is(.eyebrow, .card-kicker, .text-action, .mea-subtitle, .quote-block, .quote-block span, .system-card ul) { color: var(--palette-text, #102e46); }
-.desk-stage .screen-scroll :is(.mea-archive-note, .mea-heritage-strip, .mea-hero-image) { background: var(--palette-card, #fff); }
+.desk-stage .screen-scroll :is(.mea-note, .mea-heritage-strip, .mea-hero-image) { background: var(--palette-card, #fff); }
 .mea-heading h1 { font-size: clamp(2rem, 4vw, 3.5rem); max-width: 15ch; }
 @media (max-width: 720px) {
   .screen-header { flex-wrap: wrap; gap: .15rem; padding-block: .45rem; }

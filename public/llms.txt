@@ -1,19 +1,20 @@
 # Heraldic Clouds Inc.
 
-> Heraldic Clouds Inc. pursues a mission to develop AGI, advance MEA Cloud Desktops, and build PeopleWelcome, a social media platform for humans and machines. These are goals, not claims of achieved AGI or current product availability.
+> Heraldic Clouds Inc. pursues a mission to democratize technology and ensure prosperety for all humanity through free, democratized, humane AI and pioneering AI governance solutions.
 
-The current site is a company overview and archive-inspired presentation. MEA feature statements below describe the historical concept and should not be interpreted as confirmation of a currently available product or service. The site has no affiliate storefront or third-party tracking.
+The company is committed to technology aligned with the values of humanity rather than the interests of elites; open-source software; Web3.0 and blockchain; privacy-respecting, anti-tracking apps; and distributed applications. Heraldic does not believe people’s data is gold and will never collect or sell it. Transparency is key to trust, and everything Heraldic builds is intended to serve humanity. The site has no affiliate storefront or third-party tracking.
 
 ## Pages
 
 - [Heraldic home](https://www.heraldic.cloud/): Company overview, mission, privacy approach, and navigation.
-- [Media](https://www.heraldic.cloud/media/): Original GTC 2017 MEA and Cloud Primary Personal Computers posters, with PDF downloads.
-- [Mise En Abyme (MEA)](https://www.heraldic.cloud/mea/): Historical MEA concept, original feature statements, and archived imagery.
-- [MEA plain-text reference](https://www.heraldic.cloud/mea.md): Markdown version of the historical concept.
+- [Media](https://www.heraldic.cloud/media/): Mise En Abyme and Cloud Primary Personal Computers posters presented at NVIDIA GTC, with PDF downloads.
+- [Mise En Abyme (MEA)](https://www.heraldic.cloud/mea/): Mise En Abyme cloud desktop services, features, and technology.
+- [MEA plain-text reference](https://www.heraldic.cloud/mea.md): Markdown version of the MEA services.
 
 ## Company and project context
 
-- MEA stands for Mise En Abyme, a historical virtual cloud desktop concept.
-- The archived concept described blending software, hardware, and the web; streaming games from the cloud; turning a smartphone into a desktop computer; next-generation security; a Cloud+-certified team; and IPv6 Internet addresses.
-- These points are preserved as historical presentation copy, not current availability, product, or security guarantees.
-- The Heraldic site presents the company's mission around access to technology and knowledge.
+- MEA stands for Mise En Abyme, a virtual cloud desktop service.
+- Mise En Abyme blends software, hardware, and the web; streams games from the cloud; turns a smartphone into a desktop computer; features next-generation security; and uses IPv6 Internet addresses.
+- The Heraldic site presents the company's mission to democratize technology and ensure prosperety for all humanity.
+- Heraldic's services and goals include liberating technology through cloud computing, business automation, gaming cloud desktops, AI social media, and building AGI.
+- Artem AI can explain Heraldic's commitments to humane AI, AI governance, open source, Web3.0, blockchain, privacy, anti-tracking, distributed apps, and transparency.

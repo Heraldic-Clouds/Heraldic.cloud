@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import siteCopy from './site-copy.json';
 import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safeCopy, foreground } from '../lambda/design.mjs';
+import { PROMPT_MAX_LENGTH, validatePrompt } from '../lambda/prompt.mjs';
 
 const keys = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
-const navItems = [['overview', 'overview'], ['how-it-works', 'howItWorks'], ['systems', 'systems'], ['about', 'about'], ['mea', 'meaLabel'], ['media', 'mediaLabel']];
+const navItems = [['overview', 'overview'], ['about', 'about'], ['mea', 'meaLabel'], ['media', 'mediaLabel']];
+const navHref = (id) => ['mea', 'media'].includes(id) ? `/${id}/` : ['how-it-works', 'systems'].includes(id) ? `/mea/#${id}` : `/#${id}`;
 const initialChat = (copy) => [{ role: 'assistant', text: copy.welcomeMessage }];
 const storageKey = 'heraldic-design-v1';
 const previousDefaults = {
@@ -22,7 +24,8 @@ export default function App({ page = 'home' }) {
   const stageRef = useRef(null);
   const [copy, setCopy] = useState(siteCopy);
   const [prompt, setPrompt] = useState('');
-  const [promptOpen, setPromptOpen] = useState(false);
+  const promptOpen = true;
+  const [keyboardOpen, setKeyboardOpen] = useState(true);
   const [theme, setTheme] = useState(null);
   const [messages, setMessages] = useState(() => initialChat(siteCopy));
   const [busy, setBusy] = useState(false);
@@ -30,7 +33,7 @@ export default function App({ page = 'home' }) {
   const [layout, setLayout] = useState(defaultLayout);
   const [loaded, setLoaded] = useState(false);
   const [previousDesign, setPreviousDesign] = useState(null);
-  const [storageNotice, setStorageNotice] = useState('Design saved only in this browser. No cookies.');
+  const [storageNotice, setStorageNotice] = useState('This site is not tracking you. Design saved only in this browser. No cookies.');
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -41,7 +44,7 @@ export default function App({ page = 'home' }) {
         for (const [key, value] of Object.entries(previousDefaults)) if (edits[key] === value) delete edits[key];
         setCopy({ ...siteCopy, ...edits });
       }
-    } catch { setStorageNotice('Browser storage unavailable. Changes last for this visit only. No cookies.'); }
+    } catch { setStorageNotice('This site is not tracking you. Changes last for this visit only. No cookies.'); }
     setLoaded(true);
     if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }, []);
@@ -50,7 +53,7 @@ export default function App({ page = 'home' }) {
     try {
       if (!theme && layout === defaultLayout && copy === siteCopy) localStorage.removeItem(storageKey);
       else localStorage.setItem(storageKey, JSON.stringify({ version: 1, theme, layout, copy: Object.fromEntries(Object.entries(copy).filter(([key, value]) => siteCopy[key] !== value)) }));
-    } catch { setStorageNotice('Browser storage unavailable. Changes last for this visit only. No cookies.'); }
+    } catch { setStorageNotice('This site is not tracking you. Changes last for this visit only. No cookies.'); }
   }, [copy, theme, layout, loaded]);
   const resetDesign = () => { setTheme(null); setLayout(defaultLayout); setCopy(siteCopy); setPreviousDesign(null); };
   const undoDesign = () => {
@@ -74,17 +77,20 @@ export default function App({ page = 'home' }) {
 
   const goTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const typeKey = (key) => {
-    if (!promptOpen) setPromptOpen(true);
     if (key === '⌫') { setPrompt((value) => value.slice(0, -1)); if (promptOpen) promptRef.current?.focus(); return; }
-    if (key === 'SPACE') { setPrompt((value) => `${value} `); if (promptOpen) promptRef.current?.focus(); return; }
-    setPrompt((value) => `${value}${key.toLowerCase()}`);
+    if (key === 'SPACE') { setPrompt((value) => `${value} `.slice(0, PROMPT_MAX_LENGTH)); if (promptOpen) promptRef.current?.focus(); return; }
+    setPrompt((value) => `${value}${key.toLowerCase()}`.slice(0, PROMPT_MAX_LENGTH));
     if (promptOpen) promptRef.current?.focus();
   };
 
   async function sendMessage(event) {
     event.preventDefault();
+    const validationError = validatePrompt(prompt);
+    if (validationError || busy) {
+      if (validationError) setError(validationError);
+      return;
+    }
     const text = prompt.trim();
-    if (!text || busy) return;
     const nextMessages = [...messages, { role: 'user', text }];
     setMessages(nextMessages);
     setPrompt('');
@@ -137,7 +143,7 @@ export default function App({ page = 'home' }) {
           <header className="screen-header">
             <div className="header-stripes" aria-hidden="true" />
             <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026.png" alt="" /><span>HERALDIC</span></a>
-            <nav aria-label="Screen navigation">{navItems.map(([id, label]) => <a key={id} href={['mea', 'media'].includes(id) ? `/${id}/` : `/#${id}`} aria-current={id === page ? 'page' : undefined}>{copy[label]}</a>)}</nav>
+            <nav aria-label="Screen navigation">{navItems.map(([id, label]) => <a key={id} href={navHref(id)} aria-current={id === page ? 'page' : undefined}>{copy[label]}</a>)}</nav>
           </header>
           <div className="screen-scroll" ref={screenRef}>
             {page === 'home' && <>
@@ -145,7 +151,18 @@ export default function App({ page = 'home' }) {
               <h1>{copy.heroTitle}</h1>
               <img className="mission-logo" src="/HERALDIC2026.png" alt={copy.logoAlt} width="320" height="320" fetchPriority="high" />
               <div className="mission-intro"><p className="eyebrow">{copy.ourMission}</p><p className="lede">{copy.heroBody}</p></div>
-              <div className="screen-actions"><a className="primary-action" href="/mea/">{copy.meaLabel} <span aria-hidden="true">↗</span></a><a className="text-action" href="/media/">{copy.mediaLabel} <span aria-hidden="true">↗</span></a></div>
+              <div className="screen-actions"><a className="primary-action" href="/mea/">{copy.ctaLabel} <span aria-hidden="true">↗</span></a><a className="text-action" href="/media/">{copy.mediaLabel} <span aria-hidden="true">↗</span></a></div>
+            </section>
+            <section id="about" className="screen-section about-section"><p className="eyebrow">{copy.heraldicLabel}</p><div className="about-layout"><div><h2>{copy.missionTitle}</h2><p>{copy.missionBody}</p></div><div className="quote-block">{copy.missionQuote}</div></div></section>
+            <section id="privacy" className="screen-section privacy-section"><p className="eyebrow">{copy.privacyLabel}</p><div className="privacy-layout"><h2>{copy.privacyTitle}</h2><div><p>{copy.privacyBodyOne}</p><p>{copy.privacyBodyTwo}</p></div></div></section>
+            </>}
+            {page === 'mea' && <>
+            <section id="mea" className="screen-section mea-section">
+              <div className="mea-heading"><div><p className="eyebrow">{copy.meaEyebrow}</p><h1>{copy.meaTitle}</h1><p className="mea-subtitle">{copy.meaSubtitle}</p><p className="mea-intro">{copy.meaIntro}</p></div><figure className="mea-hero-image"><img src="/mea/beta-cloud-computer.png" alt={copy.meaDesktopAlt} /></figure></div>
+              <div className="mea-feature-grid">
+                <article><span>01</span><p>{copy.meaFeatureOne}</p></article><article><span>02</span><p>{copy.meaFeatureTwo}</p></article><article><span>03</span><p>{copy.meaFeatureThree}</p></article><article><span>04</span><p>{copy.meaFeatureFour}</p></article><article><span>05</span><p>{copy.meaFeatureFive}</p></article><article><span>06</span><p>{copy.meaFeatureSix}</p></article>
+              </div>
+              <div className="mea-heritage-strip" aria-label={copy.meaHeritageLabel}><img src="/mea/web3.png" alt={copy.meaWeb3Alt} /><img src="/mea/ipv6-launch.png" alt={copy.meaIpv6Alt} /></div>
             </section>
             <section id="how-it-works" className="screen-section story-section">
               <p className="eyebrow">{copy.originalIdea}</p><div className="section-heading"><h2>{copy.capabilityTitle}</h2><p>{copy.capabilityBody}</p></div>
@@ -155,18 +172,7 @@ export default function App({ page = 'home' }) {
               <div className="section-heading"><p className="eyebrow">{copy.meaSystems}</p><h2>{copy.systemsTitle}</h2><p>{copy.systemsBody}</p></div>
               <div className="system-grid"><article className="system-card"><div className="system-number">01</div><p className="card-kicker">{copy.eleetName}</p><h3>{copy.eleetTitle}</h3><p>{copy.eleetBody}</p><ul><li>{copy.eleetBulletOne}</li><li>{copy.eleetBulletTwo}</li><li>{copy.eleetBulletThree}</li></ul></article><article className="system-card"><div className="system-number">02</div><p className="card-kicker">{copy.powerName}</p><h3>{copy.powerTitle}</h3><p>{copy.powerBody}</p><ul><li>{copy.powerBulletOne}</li><li>{copy.powerBulletTwo}</li><li>{copy.powerBulletThree}</li></ul></article><article className="system-card"><div className="system-number">03</div><p className="card-kicker">{copy.newbieName}</p><h3>{copy.newbieTitle}</h3><p>{copy.newbieBody}</p><ul><li>{copy.newbieBulletOne}</li><li>{copy.newbieBulletTwo}</li><li>{copy.newbieBulletThree}</li></ul></article></div>
             </section>
-            <section id="privacy" className="screen-section privacy-section"><p className="eyebrow">{copy.privacyLabel}</p><div className="privacy-layout"><h2>{copy.privacyTitle}</h2><div><p>{copy.privacyBodyOne}</p><p>{copy.privacyBodyTwo}</p></div></div></section>
-            <section id="about" className="screen-section about-section"><p className="eyebrow">{copy.heraldicLabel}</p><div className="about-layout"><div><h2>{copy.missionTitle}</h2><p>{copy.missionBody}</p></div><div className="quote-block">{copy.missionQuote}<span>{copy.quoteAttribution}</span></div></div><p className="closing-note">{copy.closingNote}</p></section>
             </>}
-            {page === 'mea' && <section id="mea" className="screen-section mea-section">
-              <div className="mea-heading"><div><p className="eyebrow">{copy.meaEyebrow}</p><h1>{copy.meaTitle}</h1><p className="mea-subtitle">{copy.meaSubtitle}</p><p className="mea-intro">{copy.meaIntro}</p></div><figure className="mea-hero-image"><img src="/mea/beta-cloud-computer.png" alt={copy.meaDesktopAlt} /><figcaption>{copy.meaImageCaption}</figcaption></figure></div>
-              <p className="mea-archive-note">{copy.meaArchiveNote}</p>
-              <div className="mea-feature-grid">
-                <article><span>01</span><p>{copy.meaFeatureOne}</p></article><article><span>02</span><p>{copy.meaFeatureTwo}</p></article><article><span>03</span><p>{copy.meaFeatureThree}</p></article><article><span>04</span><p>{copy.meaFeatureFour}</p></article><article><span>05</span><p>{copy.meaFeatureFive}</p></article><article><span>06</span><p>{copy.meaFeatureSix}</p></article>
-              </div>
-              <div className="mea-heritage-strip" aria-label={copy.meaHeritageLabel}><img src="/mea/a-plus-certified.png" alt={copy.meaAplusAlt} /><img src="/mea/cloudplus-certified.png" alt={copy.meaCloudplusAlt} /><img src="/mea/web3.png" alt={copy.meaWeb3Alt} /><img src="/mea/ipv6-launch.png" alt={copy.meaIpv6Alt} /></div>
-              <figure className="mea-artwork"><img src="/mea/mea-art.jpg" alt={copy.meaArtworkAlt} /><figcaption>{copy.meaArtworkCaption}</figcaption></figure>
-            </section>}
             {page === 'media' && <section id="media" className="screen-section media-section">
               <p className="eyebrow">{copy.mediaEyebrow}</p><h1>{copy.mediaTitle}</h1><p className="lede">{copy.mediaIntro}</p>
               <div className="media-grid">
@@ -175,7 +181,7 @@ export default function App({ page = 'home' }) {
                   <h2>{copy[title]}</h2><p className="media-size">PDF · {size}</p>
                   <div className="screen-actions"><a className="primary-action" href={`/media/${file}`} target="_blank" rel="noopener noreferrer">{copy.openPdf}</a><a className="text-action" href={`/media/${file}`} download>{copy.downloadPdf}</a></div>
                 </article>)}
-              </div><p className="mea-archive-note">{copy.mediaArchiveNote}</p>
+              </div><p className="mea-note">{copy.mediaNote}</p>
             </section>}
           </div>
           <div className="screen-footer" aria-hidden="true" />
@@ -183,11 +189,11 @@ export default function App({ page = 'home' }) {
         <div className="monitor-stand" aria-hidden="true"><div /></div>
       </section>
 
-      <footer className="keyboard-footer" aria-label="Heraldic keyboard and Artem AI">
+      {keyboardOpen ? <footer className="keyboard-footer" aria-label="Heraldic keyboard and Artem AI">
         <div className="keyboard-shell">
-          <div className="keyboard-topline"><span>{copy.keyboardLabel}</span><span>ARTEM AI · HERALDIC CEO PERSONA</span></div>
-          <div className={`keyboard-body${promptOpen ? ' chat-open' : ''}`}>
-            <section className={`chat-panel${promptOpen ? ' is-open' : ''}`} aria-label="Chat with Artem AI" aria-hidden={!promptOpen}>
+          <div className="keyboard-topline"><button type="button" className="keyboard-close" onClick={() => setKeyboardOpen(false)} aria-label="Close keyboard">×</button></div>
+          <div className="keyboard-body chat-open">
+            <section className="chat-panel is-open" aria-label="Chat with Artem AI">
               <div className="chat-messages" aria-live="polite">
                 {messages.slice(-5).map((message, index) => <p className={`chat-message ${message.role}`} key={`${index}-${message.text.slice(0, 15)}`}><strong>{message.role === 'assistant' ? copy.artemName : copy.youLabel}</strong>{message.text}</p>)}
                 {busy && <p className="chat-message assistant"><strong>ARTEM AI</strong>{copy.typingLabel}</p>}
@@ -195,18 +201,19 @@ export default function App({ page = 'home' }) {
               {error && <p className="chat-error" role="alert">{error}</p>}
               <form className="prompt-form" onSubmit={sendMessage}>
                 <label className="sr-only" htmlFor="artem-prompt">Message Artem AI</label>
-                <input id="artem-prompt" ref={promptRef} value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={1200} placeholder={copy.promptPlaceholder} disabled={busy} />
+                <input id="artem-prompt" ref={promptRef} value={prompt} onChange={(event) => setPrompt(event.target.value.slice(0, PROMPT_MAX_LENGTH))} maxLength={PROMPT_MAX_LENGTH} aria-describedby="artem-prompt-help" placeholder={copy.promptPlaceholder} disabled={busy} />
+                <span id="artem-prompt-help" className="sr-only">Maximum {PROMPT_MAX_LENGTH} characters. Links are not allowed.</span>
                 <button type="submit" disabled={busy || !prompt.trim()}>{copy.sendLabel}</button>
               </form>
             </section>
             <div className="keyboard" role="group" aria-label="On-screen typing keyboard">
               {keys.map((row, index) => <div className={`key-row row-${index + 1}`} key={row.join('')}>{row.map((key) => <button key={key} onClick={() => typeKey(key)} aria-label={`Type ${key}`}>{key}</button>)}</div>)}
-              <div className="key-row bottom-row"><button className="utility-key" onClick={() => typeKey('⌫')} aria-label="Delete last character">⌫</button><button className="wide-key" onClick={() => typeKey('SPACE')}>SPACE</button><button className="utility-key" onClick={() => promptOpen ? sendMessage({ preventDefault() {} }) : setPromptOpen(true)} aria-label={promptOpen ? 'Send prompt' : 'Open prompt'}>↵</button></div>
+              <div className="key-row bottom-row"><button className="utility-key" onClick={() => typeKey('⌫')} aria-label="Delete last character">⌫</button><button className="wide-key" onClick={() => typeKey('SPACE')}>SPACE</button><button className="utility-key" onClick={() => sendMessage({ preventDefault() {} })} aria-label="Send prompt">↵</button></div>
             </div>
           </div>
           <div className="keyboard-footer-line"><span>{translatedFooter}</span><span>{storageNotice} {previousDesign && <button type="button" disabled={busy} onClick={undoDesign}>Undo design</button>} <button type="button" disabled={busy} onClick={resetDesign}>Reset design</button></span></div>
         </div>
-      </footer>
+      </footer> : <button type="button" className="keyboard-reopen" onClick={() => setKeyboardOpen(true)}>Open keyboard</button>}
     </main>
   );
 }

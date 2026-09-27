@@ -5,4 +5,5 @@ build-HeraldicSiteFunction:
 	cp -R dist/. "$(ARTIFACTS_DIR)/dist"
 	cp lambda/index.mjs "$(ARTIFACTS_DIR)/index.mjs"
 	cp lambda/design.mjs "$(ARTIFACTS_DIR)/design.mjs"
+	cp lambda/prompt.mjs "$(ARTIFACTS_DIR)/prompt.mjs"
 	cp src/site-copy.json "$(ARTIFACTS_DIR)/site-copy.json"

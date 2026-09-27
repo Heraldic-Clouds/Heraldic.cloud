@@ -7,6 +7,7 @@ COPY index.html ./
 COPY public ./public
 COPY src ./src
 COPY lambda/design.mjs ./lambda/design.mjs
+COPY lambda/prompt.mjs ./lambda/prompt.mjs
 COPY scripts ./scripts
 RUN npm run build
 
