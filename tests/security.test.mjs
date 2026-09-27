@@ -66,6 +66,11 @@ test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 40
       assert.match(result.body, /property="og:title"/);
       assert.match(result.body, /name="twitter:title"/);
       assert.match(result.body, /application\/ld\+json/);
+      if (path === '/media/') {
+        assert.match(result.body, /<title>Heraldic Media \| MEA Posters & Cloud Desktop Archive<\/title>/);
+        assert.match(result.body, /View Heraldic’s NVIDIA GTC conference posters and archival cloud desktop/);
+        assert.match(result.body, /media\/gtc2018-mea-poster-preview\.jpg/);
+      }
       assert.match(result.headers['Content-Security-Policy'], /sha256-/);
     }
   }
@@ -97,10 +102,11 @@ test('mission, media links and removed monitor label are prerendered', async () 
   assert.match(mea, /id="how-it-works"/);
   assert.match(mea, /id="systems"/);
   const media = (await handler({ rawPath: '/media/' })).body;
-  assert.match(media, /GTC2017MEAposter\.pdf/);
-  assert.match(media, /Mise_En_Abyme_Cloud_Primary_personal_Computers\.pdf/);
-  assert.match(media, /presented at NVIDIA GTC/);
-  assert.doesNotMatch(media, /original|historical|archive/i);
+  assert.match(media, /gtc2017-preview\.png/);
+  assert.match(media, /gtc2018-mea-poster-preview\.jpg/);
+  assert.match(media, /google-earth-zion\.png/);
+  assert.match(media, /Heraldic’s conference posters/);
+  assert.doesNotMatch(media, /\.pdf|Download PDF|Open PDF/i);
   assert.doesNotMatch(media, /<iframe|<object/);
 });
 test('MEA presents current offerings without removed historical graphics', async () => {
@@ -110,19 +116,10 @@ test('MEA presents current offerings without removed historical graphics', async
   assert.match(mea, /Mise En Abyme is a desktop experience/);
   assert.match(mea, /Three paths into the cloud/);
 });
-test('Lambda redirects large PDFs to configured HTTPS storage without cookies', async () => {
-  const old = process.env.MEDIA_BASE_URL;
-  try {
-    delete process.env.MEDIA_BASE_URL;
-    assert.equal((await handler({ rawPath: '/media/GTC2017MEAposter.pdf' })).statusCode, 503);
-    process.env.MEDIA_BASE_URL = 'https://media.example.test/posters/';
-    const result = await handler({ rawPath: '/media/GTC2017MEAposter.pdf' });
-    assert.equal(result.statusCode, 302);
-    assert.equal(result.headers.Location, 'https://media.example.test/posters/GTC2017MEAposter.pdf');
-    assert.ok(!Object.keys(result.headers).some(key => key.toLowerCase() === 'set-cookie'));
-    process.env.MEDIA_BASE_URL = 'http://insecure.example.test/';
-    assert.equal((await handler({ rawPath: '/media/GTC2017MEAposter.pdf' })).statusCode, 503);
-  } finally { if (old === undefined) delete process.env.MEDIA_BASE_URL; else process.env.MEDIA_BASE_URL = old; }
+test('removed poster PDFs are not served by the site', async () => {
+  for (const path of ['/media/GTC2017MEAposter.pdf', '/media/Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf', '/media/GTC2018MEAposter.pdf']) {
+    assert.equal((await handler({ rawPath: path })).statusCode, 404);
+  }
 });
 test('cross-site API calls and traversal fail closed', async () => {
   assert.equal((await handler({ rawPath: '/api/chat', httpMethod: 'POST', headers: { 'sec-fetch-site': 'cross-site' } })).statusCode, 403);

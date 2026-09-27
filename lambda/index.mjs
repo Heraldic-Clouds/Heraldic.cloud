@@ -7,7 +7,6 @@ import { PROMPT_MAX_LENGTH, validatePrompt } from './prompt.mjs';
 
 const moduleDirectory = fileURLToPath(new URL('.', import.meta.url));
 export const distDirectory = await readFile(resolve(moduleDirectory, 'dist/index.html')).then(() => resolve(moduleDirectory, 'dist')).catch(() => resolve(moduleDirectory, '../dist'));
-export const mediaFiles = new Set(['/media/GTC2017MEAposter.pdf', '/media/Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf']);
 const siteCopyTemplate = JSON.parse(await readFile(resolve(moduleDirectory, 'site-copy.json'), 'utf8').catch(() => readFile(resolve(moduleDirectory, '../src/site-copy.json'), 'utf8')));
 const siteCopyKeys = Object.keys(siteCopyTemplate);
 const siteCopyKeySet = new Set(siteCopyKeys);
@@ -190,15 +189,6 @@ async function staticHandler(event, method) {
   const path = event.rawPath || event.path || '/';
   const redirects = { '/mea': '/mea/', '/mea/index.html': '/mea/', '/media': '/media/', '/media/index.html': '/media/', '/index.html': '/' };
   if (Object.hasOwn(redirects, path)) return { statusCode: 308, headers: { ...securityHeaders, Location: redirects[path] }, body: '' };
-  if (mediaFiles.has(path)) {
-    // Buffered API Gateway/Lambda responses cannot carry these large originals.
-    try {
-      const base = new URL(process.env.MEDIA_BASE_URL);
-      if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash) throw new Error('Invalid media origin');
-      const location = new URL(path.split('/').at(-1), base.href.replace(/\/?$/, '/')).href;
-      return { statusCode: 302, headers: { ...securityHeaders, Location: location, 'Cache-Control': 'no-cache' }, body: '' };
-    } catch { return { statusCode: 503, headers: { ...securityHeaders, 'Content-Type': 'text/plain; charset=utf-8' }, body: method === 'HEAD' ? '' : 'Poster delivery is not configured. Set MEDIA_BASE_URL to the HTTPS media origin.' }; }
-  }
   const requested = safePath(['/mea/', '/media/'].includes(path) ? `${path}index.html` : path);
   if (!requested) return { statusCode: 400, headers: securityHeaders, body: 'Bad request' };
   const candidate = resolve(distDirectory, requested);

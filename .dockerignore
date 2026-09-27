@@ -16,7 +16,6 @@ CompTIA Cloud+ ce logo
 *.war
 *.apk
 *.pdf
-!public/media/*.pdf
 *.psd
 *.so
 *.key

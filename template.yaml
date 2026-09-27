@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Heraldic privacy-first React website
 Parameters:
-  MediaBaseUrl:
-    Type: String
-    AllowedPattern: 'https://[^?#]+'
-    Description: HTTPS S3/CDN directory containing the two original poster PDFs (include trailing slash).
   OpenAISecretArn:
     Type: String
     Description: ARN of an AWS Secrets Manager secret containing the OpenAI API key.
@@ -25,7 +21,6 @@ Resources:
         Variables:
           OPENAI_API_KEY: !Sub '{{resolve:secretsmanager:${OpenAISecretArn}:SecretString}}'
           OPENAI_MODEL: gpt-6-luna
-          MEDIA_BASE_URL: !Ref MediaBaseUrl
       Events:
         SiteRoot:
           Type: HttpApi
