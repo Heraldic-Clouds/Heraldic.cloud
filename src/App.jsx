@@ -25,7 +25,7 @@ export default function App({ page = 'home' }) {
   const [copy, setCopy] = useState(siteCopy);
   const [prompt, setPrompt] = useState('');
   const promptOpen = true;
-  const [keyboardOpen, setKeyboardOpen] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(true);
   const [theme, setTheme] = useState(null);
   const [messages, setMessages] = useState(() => initialChat(siteCopy));
   const [busy, setBusy] = useState(false);
@@ -189,10 +189,10 @@ export default function App({ page = 'home' }) {
         <div className="monitor-stand" aria-hidden="true"><div /></div>
       </section>
 
-      {keyboardOpen ? <footer className="keyboard-footer" aria-label="Heraldic keyboard and Artem AI">
+      <footer className="keyboard-footer" aria-label="Heraldic keyboard and Artem AI">
         <div className="keyboard-shell">
-          <div className="keyboard-topline"><button type="button" className="keyboard-close" onClick={() => setKeyboardOpen(false)} aria-label="Close keyboard">×</button></div>
-          <div className="keyboard-body chat-open">
+          <div className="keyboard-topline">{keyboardVisible ? <button type="button" className="keyboard-close" onClick={() => setKeyboardVisible(false)} aria-label="Close keyboard">×</button> : <button type="button" className="keyboard-reopen" onClick={() => setKeyboardVisible(true)}>Open keyboard</button>}</div>
+          <div className={`keyboard-body chat-open${keyboardVisible ? '' : ' keyboard-closed'}`}>
             <section className="chat-panel is-open" aria-label="Chat with Artem AI">
               <div className="chat-messages" aria-live="polite">
                 {messages.slice(-5).map((message, index) => <p className={`chat-message ${message.role}`} key={`${index}-${message.text.slice(0, 15)}`}><strong>{message.role === 'assistant' ? copy.artemName : copy.youLabel}</strong>{message.text}</p>)}
@@ -206,14 +206,14 @@ export default function App({ page = 'home' }) {
                 <button type="submit" disabled={busy || !prompt.trim()}>{copy.sendLabel}</button>
               </form>
             </section>
-            <div className="keyboard" role="group" aria-label="On-screen typing keyboard">
+            {keyboardVisible && <div className="keyboard" role="group" aria-label="On-screen typing keyboard">
               {keys.map((row, index) => <div className={`key-row row-${index + 1}`} key={row.join('')}>{row.map((key) => <button key={key} onClick={() => typeKey(key)} aria-label={`Type ${key}`}>{key}</button>)}</div>)}
               <div className="key-row bottom-row"><button className="utility-key" onClick={() => typeKey('⌫')} aria-label="Delete last character">⌫</button><button className="wide-key" onClick={() => typeKey('SPACE')}>SPACE</button><button className="utility-key" onClick={() => sendMessage({ preventDefault() {} })} aria-label="Send prompt">↵</button></div>
-            </div>
+            </div>}
           </div>
           <div className="keyboard-footer-line"><span>{translatedFooter}</span><span>{storageNotice} {previousDesign && <button type="button" disabled={busy} onClick={undoDesign}>Undo design</button>} <button type="button" disabled={busy} onClick={resetDesign}>Reset design</button></span></div>
         </div>
-      </footer> : <button type="button" className="keyboard-reopen" onClick={() => setKeyboardOpen(true)}>Open keyboard</button>}
+      </footer>
     </main>
   );
 }

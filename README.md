@@ -28,6 +28,18 @@ sam build
 sam deploy --guided
 ```
 
+For repeatable Windows deployments, use the checked-in wrapper. It validates the SAM template, builds the function, resolves an artifacts bucket, and deploys without putting the OpenAI key in the template or command output:
+
+```powershell
+.\scripts\deploy.ps1 `
+  -MediaBaseUrl "https://your-media-origin.example/" `
+  -OpenAISecretArn "arn:aws:secretsmanager:REGION:ACCOUNT:secret:heraldic/openai" `
+  -StackName "heraldic-cloud" `
+  -Region "us-west-2"
+```
+
+The secret must already exist in AWS Secrets Manager, and the deploying identity needs CloudFormation, SAM artifacts, Lambda, API Gateway, and Secrets Manager permissions. Use `-UseContainer` when the local SAM build environment does not match the Lambda runtime.
+
 The Lambda handler sets a restrictive Content Security Policy, blocks framing, disables unneeded browser permissions, uses HTTPS-only transport policy, safely normalizes request paths, and serves no third-party resources.
 
 ## SEO and browser-local design

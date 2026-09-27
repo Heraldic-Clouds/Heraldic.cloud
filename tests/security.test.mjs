@@ -75,6 +75,7 @@ test('mission, media links and removed monitor label are prerendered', async () 
   assert.match(home, /Nothing is impossible/);
   assert.match(home, /Our mission is to democratize technology and ensure prosperety for all humanity/);
   assert.match(home, /free, democratized, humane AI/);
+  assert.match(home, /We are committed to free, democratized, humane AI aligned with the values of humanity/);
   assert.match(home, /pioneering AI governance solutions|pioneer company in AI governance solutions/);
   assert.match(home, /HERALDIC2026\.png/);
   assert.match(home, /class="mission-logo"/);
@@ -82,6 +83,7 @@ test('mission, media links and removed monitor label are prerendered', async () 
   assert.match(home, /id="artem-prompt"/);
   assert.match(home, /This site is not tracking you/);
   assert.match(home, /keyboard-close/);
+  assert.match(home, /class="chat-panel is-open"/);
   assert.doesNotMatch(home, /Heraldic’s stated values/);
   assert.doesNotMatch(home, /ARTEM AI · HERALDIC CEO PERSONA/);
   assert.ok(home.indexOf('id="about"') < home.indexOf('id="privacy"'));
