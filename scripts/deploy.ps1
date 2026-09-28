@@ -1,10 +1,6 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidatePattern('^https://[^?#]+$')]
-  [string]$MediaBaseUrl,
-
-  [Parameter(Mandatory = $true)]
   [string]$OpenAISecretArn,
 
   [string]$StackName = 'heraldic-cloud',
@@ -39,7 +35,6 @@ $deployArguments = @(
   '--no-confirm-changeset',
   '--no-fail-on-empty-changeset',
   '--parameter-overrides',
-  "MediaBaseUrl=$MediaBaseUrl",
   "OpenAISecretArn=$OpenAISecretArn"
 )
 if ($Region) { $deployArguments += @('--region', $Region) }

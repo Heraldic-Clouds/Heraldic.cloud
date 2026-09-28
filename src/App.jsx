@@ -9,6 +9,15 @@ const keys = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
 const navItems = [['overview', 'overview'], ['about', 'about'], ['mea', 'meaLabel'], ['media', 'mediaLabel']];
+const mediaPosters = [
+  ['gtc2017-preview.png', 'gtcPosterTitle', 'gtcPosterAlt'],
+  ['mea-computers-preview.png', 'meaPosterTitle', 'meaPosterAlt'],
+  ['gtc2018-mea-poster-preview.jpg', 'gtc2018PosterTitle', 'gtc2018PosterAlt'],
+];
+const mediaImages = [
+  ['alter-ego-01.png', 'alterEgoOneTitle', 'alterEgoOneAlt'], ['alter-ego-02.png', 'alterEgoTwoTitle', 'alterEgoTwoAlt'], ['alter-ego-03.png', 'alterEgoThreeTitle', 'alterEgoThreeAlt'], ['alter-ego-04.png', 'alterEgoFourTitle', 'alterEgoFourAlt'], ['alter-ego-06.jpg', 'alterEgoSixTitle', 'alterEgoSixAlt'], ['alter-ego-07.jpg', 'alterEgoSevenTitle', 'alterEgoSevenAlt'],
+  ['cnn-nvidia-demo.png', 'cnnNvidiaTitle', 'cnnNvidiaAlt'], ['cnn-game-demo.png', 'cnnGameTitle', 'cnnGameAlt'], ['google-earth-mckinley.png', 'mckinleyTitle', 'mckinleyAlt'], ['google-earth-beaver-mesa.png', 'beaverMesaTitle', 'beaverMesaAlt'], ['benchmark-standard.png', 'benchmarkTitle', 'benchmarkAlt'], ['google-earth-bryce.png', 'bryceTitle', 'bryceAlt'], ['benchmark-extreme.png', 'benchmarkExtremeTitle', 'benchmarkExtremeAlt'], ['google-earth-canyonlands.png', 'canyonlandsTitle', 'canyonlandsAlt'], ['google-earth-glacier.png', 'glacierTitle', 'glacierAlt'], ['google-earth-grand-teton.png', 'grandTetonTitle', 'grandTetonAlt'], ['google-earth-kings-canyon.png', 'kingsCanyonTitle', 'kingsCanyonAlt'], ['google-earth-zion.png', 'zionTitle', 'zionAlt'],
+];
 const navHref = (id) => ['mea', 'media'].includes(id) ? `/${id}/` : ['how-it-works', 'systems'].includes(id) ? `/mea/#${id}` : `/#${id}`;
 const initialChat = (copy) => [{ role: 'assistant', text: copy.welcomeMessage }];
 const storageKey = 'heraldic-design-v1';
@@ -175,13 +184,14 @@ export default function App({ page = 'home' }) {
             </>}
             {page === 'media' && <section id="media" className="screen-section media-section">
               <p className="eyebrow">{copy.mediaEyebrow}</p><h1>{copy.mediaTitle}</h1><p className="lede">{copy.mediaIntro}</p>
-              <div className="media-grid">
-                {[['GTC2017MEAposter.pdf', 'gtc2017-preview.png', 'gtcPosterTitle', 'gtcPosterAlt', '62.1 MiB'], ['Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf', 'mea-computers-preview.png', 'meaPosterTitle', 'meaPosterAlt', '5.9 MiB']].map(([file, preview, title, alt, size]) => <article className="media-card" key={file}>
-                  <a className="poster-preview" href={`/media/${file}`} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openPdf}: ${copy[title]}`}><img src={`/media/${preview}`} alt={copy[alt]} loading="lazy" decoding="async" width="1100" height="1100" /></a>
-                  <h2>{copy[title]}</h2><p className="media-size">PDF · {size}</p>
-                  <div className="screen-actions"><a className="primary-action" href={`/media/${file}`} target="_blank" rel="noopener noreferrer">{copy.openPdf}</a><a className="text-action" href={`/media/${file}`} download>{copy.downloadPdf}</a></div>
+              <h2>{copy.mediaPostersHeading}</h2><div className="media-grid">
+                {mediaPosters.map(([file, title, alt]) => <article className="media-card" key={file}>
+                  <a className="poster-preview" href={`/media/${file}`} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></a>
+                  <h2>{copy[title]}</h2>
                 </article>)}
               </div><p className="mea-note">{copy.mediaNote}</p>
+              <h2>{copy.mediaGalleryHeading}</h2><p>{copy.mediaGalleryIntro}</p>
+              <div className="image-gallery">{mediaImages.map(([file, title, alt]) => <figure className="gallery-card" key={file}><a href={`/media/${file}`} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></a><figcaption>{copy[title]}</figcaption></figure>)}</div>
             </section>}
           </div>
           <div className="screen-footer" aria-hidden="true" />

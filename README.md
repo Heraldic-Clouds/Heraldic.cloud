@@ -32,7 +32,6 @@ For repeatable Windows deployments, use the checked-in wrapper. It validates the
 
 ```powershell
 .\scripts\deploy.ps1 `
-  -MediaBaseUrl "https://your-media-origin.example/" `
   -OpenAISecretArn "arn:aws:secretsmanager:REGION:ACCOUNT:secret:heraldic/openai" `
   -StackName "heraldic-cloud" `
   -Region "us-west-2"
@@ -44,13 +43,11 @@ The Lambda handler sets a restrictive Content Security Policy, blocks framing, d
 
 ## SEO and browser-local design
 
-### Media posters
+### Media archive
 
-`/media/` includes first-page image previews and the two unchanged original poster PDFs. Local Node/Docker delivery streams the PDFs with HEAD and byte-range support; files are not fetched until a visitor selects a PDF link. Original archive content is preserved, including historic branding and contact information.
+`/media/` presents three conference posters and 18 archival cloud desktop, graphics benchmark, and 3D mapping images. Poster artwork opens as an image; the site does not provide a PDF service or PDF downloads. The gallery uses local assets only, with no cookies, analytics, or tracking.
 
-For AWS, upload `public/media/GTC2017MEAposter.pdf` and `public/media/Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf` to your S3/CDN media directory and supply its HTTPS directory URL as SAM parameter `MediaBaseUrl` (server environment `MEDIA_BASE_URL`). Lambda redirects the two allowlisted PDF paths there instead of buffering files larger than the response limit. Configure that media origin without cookies, analytics or tracking; no external resources are loaded on the Media page itself. Without this deployment parameter the PDF route returns a clear 503. No bucket, public access, DNS, uploads or cloud deployment are created automatically.
-
-The build prerenders `/` and `/mea/` with unique titles, descriptions, canonical URLs, Open Graph metadata, Organization/WebSite/WebPage structured data, and MEA breadcrumbs. `public/robots.txt`, `sitemap.xml`, and `llms.txt` describe the public pages. Unknown URLs return 404. Canonicals currently use `https://www.heraldic.cloud`; update the prerender script and public discovery files together if the production hostname changes. Publishing and Search Console verification/submission remain deployment tasks, not guarantees of indexing or rankings.
+The build prerenders `/`, `/mea/`, and `/media/` with unique titles, descriptions, canonical URLs, Open Graph metadata, Organization/WebSite/WebPage structured data, and breadcrumbs. The Media page uses its GTC poster as the social-sharing image. `public/robots.txt`, `sitemap.xml`, and `llms.txt` describe the public pages. Unknown URLs return 404. Canonicals currently use `https://www.heraldic.cloud`; update the prerender script and public discovery files together if the production hostname changes. Publishing and Search Console verification/submission remain deployment tasks, not guarantees of indexing or rankings.
 
 Artem AI can adjust spacing, content width, typography, grid/list/two-column cards, stacked or side-by-side home hero (logo left/right), corners, alignment, text size, and logo size. Layout responses are validated patches: requesting a new font preserves a visitor's earlier spacing and card choices. Mobile layouts automatically stack content. Undo design restores the previous change during this visit; Reset design clears the saved preferences. All responses are validated on both server and client. It cannot create pages, inject CSS/HTML/JavaScript, hide navigation, or change security settings. Unreadable palettes fail validation. Prompt refusal is defense in depth; constrained rendering, not the model's obedience, is the security boundary.
 
