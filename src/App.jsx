@@ -20,7 +20,7 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
   const stageRef = useRef(null);
   const [copy, setCopy] = useState(siteCopy);
   const [prompt, setPrompt] = useState('');
-  const [keyboardVisible, setKeyboardVisible] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [theme, setTheme] = useState(null);
   const [messages, setMessages] = useState(() => initialChat(siteCopy));
   const [busy, setBusy] = useState(false);

@@ -103,6 +103,8 @@ nav a:hover, nav a[aria-current] { border-bottom-color: currentColor; }
 .mea-systems-heading > p:nth-child(2) { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; color: var(--palette-muted,#4d7789); line-height: 1.7; }
 .mea-systems-heading img { grid-column: 1; grid-row: 2; width: 100%; max-height: 18rem; object-fit: contain; }
 .leadership-page .leader-profile { display: grid; grid-template-columns: minmax(9rem, 15rem) 1fr; gap: clamp(1.5rem,5vw,4rem); align-items: center; max-width: 54rem; margin: 2rem auto 0; }
+.mission-art { display: block; width: min(100%, 28rem); max-height: 24rem; justify-self: center; align-self: center; border-radius: 14px; object-fit: contain; }
+.privacy-skyline { display: block; width: min(100%, 70rem); max-height: 24rem; margin: 2rem auto 0; border-radius: 14px; object-fit: contain; object-position: center bottom; }
 .leader-profile > img { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; }
 .leader-profile p, .heraldic-page-copy p { color: var(--palette-muted,#4d7789); line-height: 1.75; }
 .heraldic-page-copy { max-width: 72ch; }

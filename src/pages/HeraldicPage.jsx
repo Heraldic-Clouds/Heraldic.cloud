@@ -66,7 +66,6 @@ export default function HeraldicPage() {
   return <section className="screen-section heraldic-page">
     <p className="eyebrow">About Heraldic</p>
     <h1>Our history</h1>
-    <p className="lede">HERALDIC is an American Desktop-as-a-Service company.</p>
     <div className="company-history">{companyHistory.map((milestone) => <article className="history-milestone" key={milestone.year}>
       <div className="history-date"><span>{milestone.year}</span></div>
       <div className="history-content">
