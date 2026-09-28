@@ -2,7 +2,7 @@
 
 > Heraldic Clouds Inc. is pursuing a mission to democratize technology and ensure prosperity for all humanity. The company is committed to free, humane AI aligned with the values of humanity, not any single special interest group, and develops AI governance solutions.
 
-Heraldic’s stated commitments include open-source software, Web3.0 and blockchain, privacy-respecting and anti-tracking apps, distributed applications, and building in service of humanity. The company says it will never collect or sell visitors’ data and that transparency is key to trust. Messages submitted to Artem AI are sent to OpenAI to generate a reply; the site does not use analytics or advertising trackers.
+Heraldic’s stated commitments include open-source software, Web3.0 and blockchain, privacy-respecting app architecture, and distributed design. The company says it will never collect or sell visitors’ data and that transparency is key to trust. Messages submitted to Artem AI are sent to OpenAI to generate a reply; the site does not use analytics or advertising trackers.
 
 ## Pages
 

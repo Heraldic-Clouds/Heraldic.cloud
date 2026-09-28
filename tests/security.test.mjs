@@ -88,6 +88,10 @@ test('mission, media links and removed monitor label are prerendered', async () 
   assert.match(home, /Nothing is impossible/);
   assert.match(home, /We(?:'|&#x27;)ve embarked on the journey to democratize technology and ensure prosperity for all humanity/);
   assert.match(home, /free, humane AI/);
+  assert.match(home, /privacy-respecting app architecture, and distributed design/);
+  assert.doesNotMatch(home, /privacy-respecting anti-tracking apps, and distributed applications|Everything we build, we build in service of humanity/);
+  assert.match(home, /src="\/mea\/ai-agents\.webp"/);
+  assert.match(home, /src="\/mea\/skyline-kyev-tokyo-buenosaires-amsterdam-jerusalem\.webp"/);
   assert.match(home, /AI in service of humanity/);
   assert.match(home, /We can help you build advanced AI agents that can automate your business at any scale/);
   assert.match(home, /HERALDIC2026logo\.webp/);
