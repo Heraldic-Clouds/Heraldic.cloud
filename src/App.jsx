@@ -1,24 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import siteCopy from './site-copy.json';
+import VirtualKeyboard from './components/VirtualKeyboard.jsx';
+import { pageMetadata, resolvePagePath } from './page-routes.mjs';
 import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safeCopy, foreground } from '../lambda/design.mjs';
 import { PROMPT_MAX_LENGTH, validatePrompt } from '../lambda/prompt.mjs';
 
-const keys = [
-  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-];
-const navItems = [['overview', 'overview'], ['about', 'about'], ['mea', 'meaLabel'], ['media', 'mediaLabel']];
-const mediaPosters = [
-  ['gtc2017-preview.png', 'gtcPosterTitle', 'gtcPosterAlt'],
-  ['mea-computers-preview.png', 'meaPosterTitle', 'meaPosterAlt'],
-  ['gtc2018-mea-poster-preview.jpg', 'gtc2018PosterTitle', 'gtc2018PosterAlt'],
-];
-const mediaImages = [
-  ['alter-ego-02.png', 'alterEgoTwoTitle', 'alterEgoTwoAlt'], ['alter-ego-03.png', 'alterEgoThreeTitle', 'alterEgoThreeAlt'], ['alter-ego-04.png', 'alterEgoFourTitle', 'alterEgoFourAlt'], ['alter-ego-06.jpg', 'alterEgoSixTitle', 'alterEgoSixAlt'], ['alter-ego-07.jpg', 'alterEgoSevenTitle', 'alterEgoSevenAlt'],
-  ['cnn-nvidia-demo.png', 'cnnNvidiaTitle', 'cnnNvidiaAlt'], ['cnn-game-demo.png', 'cnnGameTitle', 'cnnGameAlt'], ['google-earth-mckinley.png', 'mckinleyTitle', 'mckinleyAlt'], ['google-earth-beaver-mesa.png', 'beaverMesaTitle', 'beaverMesaAlt'], ['benchmark-standard.png', 'benchmarkTitle', 'benchmarkAlt'], ['google-earth-bryce.png', 'bryceTitle', 'bryceAlt'], ['benchmark-extreme.png', 'benchmarkExtremeTitle', 'benchmarkExtremeAlt'], ['google-earth-canyonlands.png', 'canyonlandsTitle', 'canyonlandsAlt'], ['google-earth-glacier.png', 'glacierTitle', 'glacierAlt'], ['google-earth-grand-teton.png', 'grandTetonTitle', 'grandTetonAlt'], ['google-earth-kings-canyon.png', 'kingsCanyonTitle', 'kingsCanyonAlt'], ['google-earth-zion.png', 'zionTitle', 'zionAlt'],
-];
-const navHref = (id) => ['mea', 'media'].includes(id) ? `/${id}/` : ['how-it-works', 'systems'].includes(id) ? `/mea/#${id}` : `/#${id}`;
+const ChatPanel = lazy(() => import('./components/ChatPanel.jsx'));
 const initialChat = (copy) => [{ role: 'assistant', text: copy.welcomeMessage }];
 const storageKey = 'heraldic-design-v1';
 const previousDefaults = {
@@ -27,13 +14,12 @@ const previousDefaults = {
   missionBody: 'Heraldic’s founding mission is to help make technology and knowledge available wherever people want to learn, create, and build skills.',
 };
 
-export default function App({ page = 'home' }) {
+export default function App({ page = 'home', PageContent, routePageComponents = {}, routePageLoaders = {} }) {
   const screenRef = useRef(null);
   const promptRef = useRef(null);
   const stageRef = useRef(null);
   const [copy, setCopy] = useState(siteCopy);
   const [prompt, setPrompt] = useState('');
-  const promptOpen = true;
   const [keyboardVisible, setKeyboardVisible] = useState(true);
   const [theme, setTheme] = useState(null);
   const [messages, setMessages] = useState(() => initialChat(siteCopy));
@@ -43,7 +29,10 @@ export default function App({ page = 'home' }) {
   const [loaded, setLoaded] = useState(false);
   const [previousDesign, setPreviousDesign] = useState(null);
   const [storageNotice, setStorageNotice] = useState('This site is not tracking you. Design saved only in this browser. No cookies.');
-  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [chatVisible, setChatVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(page);
+  const [currentPageContent, setCurrentPageContent] = useState(() => PageContent);
+
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -56,7 +45,7 @@ export default function App({ page = 'home' }) {
       }
     } catch { setStorageNotice('This site is not tracking you. Changes last for this visit only. No cookies.'); }
     setLoaded(true);
-    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    if (location.hash) screenRef.current?.querySelector(`#${CSS.escape(decodeURIComponent(location.hash.slice(1)))}`)?.scrollIntoView();
   }, []);
   useEffect(() => {
     if (!loaded) return;
@@ -65,16 +54,32 @@ export default function App({ page = 'home' }) {
       else localStorage.setItem(storageKey, JSON.stringify({ version: 1, theme, layout, copy: Object.fromEntries(Object.entries(copy).filter(([key, value]) => siteCopy[key] !== value)) }));
     } catch { setStorageNotice('This site is not tracking you. Changes last for this visit only. No cookies.'); }
   }, [copy, theme, layout, loaded]);
-  const resetDesign = () => { setTheme(null); setLayout(defaultLayout); setCopy(siteCopy); setPreviousDesign(null); };
-  const undoDesign = () => {
-    if (!previousDesign || busy) return;
-    setTheme(previousDesign.theme); setLayout(previousDesign.layout); setCopy(previousDesign.copy); setPreviousDesign(null);
-  };
-
   useEffect(() => {
-    if (promptOpen) promptRef.current?.focus();
-  }, [promptOpen]);
-
+    const desktop = window.matchMedia('(min-width: 721px)');
+    const syncChatVisibility = () => setChatVisible(desktop.matches);
+    syncChatVisibility();
+    desktop.addEventListener('change', syncChatVisibility);
+    return () => desktop.removeEventListener('change', syncChatVisibility);
+  }, []);
+  useEffect(() => {
+    const handleHistoryNavigation = () => {
+      const destination = new URL(window.location.href);
+      const nextPage = resolvePagePath(destination.pathname);
+      if (!nextPage) return;
+      setCurrentPage(nextPage);
+      if (routePageComponents[nextPage]) setCurrentPageContent(() => routePageComponents[nextPage]);
+      updatePageMetadata(nextPage, destination);
+      routePageLoaders[nextPage]?.().then(() => requestAnimationFrame(() => {
+        screenRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+        if (destination.hash) screenRef.current?.querySelector(`#${CSS.escape(decodeURIComponent(destination.hash.slice(1)))}`)?.scrollIntoView({ block: 'start' });
+      }));
+    };
+    window.addEventListener('popstate', handleHistoryNavigation);
+    return () => window.removeEventListener('popstate', handleHistoryNavigation);
+  }, []);
+  useEffect(() => {
+    if (chatVisible) promptRef.current?.focus();
+  }, [chatVisible]);
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -84,19 +89,51 @@ export default function App({ page = 'home' }) {
     }
     for (const key of ['keyboard', 'key', 'accent']) stage.style.setProperty(`--on-${key}`, foreground((theme || defaultPalette)[key]));
   }, [theme]);
-  useEffect(() => {
-    if (!selectedMedia) return undefined;
-    const closeOnEscape = (event) => { if (event.key === 'Escape') setSelectedMedia(null); };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [selectedMedia]);
 
-  const goTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const resetDesign = () => { setTheme(null); setLayout(defaultLayout); setCopy(siteCopy); setPreviousDesign(null); };
+  const undoDesign = () => {
+    if (!previousDesign || busy) return;
+    setTheme(previousDesign.theme); setLayout(previousDesign.layout); setCopy(previousDesign.copy); setPreviousDesign(null);
+  };
+  const updatePageMetadata = (nextPage, destination) => {
+    const metadata = pageMetadata[nextPage];
+    if (!metadata) return;
+    document.title = metadata.title;
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', new URL(metadata.path, destination.origin).href);
+    document.querySelector('meta[name="description"]')?.setAttribute('content', metadata.description);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', metadata.title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', metadata.description);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', new URL(metadata.path, destination.origin).href);
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', metadata.title);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', metadata.description);
+  };
+  const navigateTo = (destination, addHistoryEntry = true) => {
+    const nextPage = resolvePagePath(destination.pathname);
+    if (!nextPage) return;
+    if (addHistoryEntry) window.history.pushState({}, '', `${destination.pathname}${destination.search}${destination.hash}`);
+    setCurrentPage(nextPage);
+    if (routePageComponents[nextPage]) setCurrentPageContent(() => routePageComponents[nextPage]);
+    updatePageMetadata(nextPage, destination);
+    screenRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    routePageLoaders[nextPage]?.().then(() => requestAnimationFrame(() => {
+      screenRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      if (destination.hash) screenRef.current?.querySelector(`#${CSS.escape(decodeURIComponent(destination.hash.slice(1)))}`)?.scrollIntoView({ block: 'start' });
+    }));
+  };
+  const handleNavigation = (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
+    const destination = new URL(anchor.href, window.location.href);
+    if (destination.origin !== window.location.origin || !resolvePagePath(destination.pathname)) return;
+    event.preventDefault();
+    if (destination.href !== window.location.href) navigateTo(destination);
+  };
   const typeKey = (key) => {
-    if (key === '⌫') { setPrompt((value) => value.slice(0, -1)); if (promptOpen) promptRef.current?.focus(); return; }
-    if (key === 'SPACE') { setPrompt((value) => `${value} `.slice(0, PROMPT_MAX_LENGTH)); if (promptOpen) promptRef.current?.focus(); return; }
-    setPrompt((value) => `${value}${key.toLowerCase()}`.slice(0, PROMPT_MAX_LENGTH));
-    if (promptOpen) promptRef.current?.focus();
+    if (key === '⌫') setPrompt((value) => value.slice(0, -1));
+    else if (key === 'SPACE') setPrompt((value) => `${value} `.slice(0, PROMPT_MAX_LENGTH));
+    else setPrompt((value) => `${value}${key.toLowerCase()}`.slice(0, PROMPT_MAX_LENGTH));
+    if (chatVisible) promptRef.current?.focus();
   };
 
   async function sendMessage(event) {
@@ -115,15 +152,10 @@ export default function App({ page = 'home' }) {
     const inferredLayout = inferLayoutPatch(text);
     if (inferredLayout) {
       setPreviousDesign({ theme, layout, copy });
-      setLayout(current => mergeLayout(current, inferredLayout));
+      setLayout((current) => mergeLayout(current, inferredLayout));
     }
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: nextMessages.slice(-8) }),
-      });
+      const response = await fetch('/api/chat', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history: nextMessages.slice(-8) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Artem AI is unavailable for a moment. Please try again shortly.');
       const checkedLayout = result.layout == null ? null : safeLayoutPatch(result.layout);
@@ -134,13 +166,11 @@ export default function App({ page = 'home' }) {
       setMessages((current) => [...current, { role: 'assistant', text: result.reply }].slice(-9));
       if (result.siteCopy && Object.keys(result.siteCopy).length) {
         setCopy((current) => ({ ...current, ...checkedCopy }));
-        if (result.siteCopy.welcomeMessage) {
-          setMessages((current) => current.map((item, index) => index === 0 && item.role === 'assistant' ? { ...item, text: result.siteCopy.welcomeMessage } : item));
-        }
+        if (result.siteCopy.welcomeMessage) setMessages((current) => current.map((item, index) => index === 0 && item.role === 'assistant' ? { ...item, text: result.siteCopy.welcomeMessage } : item));
         screenRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       }
       if (checkedTheme) setTheme(checkedTheme);
-      if (checkedLayout) setLayout(current => mergeLayout(current, checkedLayout));
+      if (checkedLayout) setLayout((current) => mergeLayout(current, checkedLayout));
     } catch (cause) {
       setError(cause.message || 'Could not reach Artem AI. Please try again.');
     } finally {
@@ -150,90 +180,34 @@ export default function App({ page = 'home' }) {
   }
 
   const translatedFooter = copy.footerText.replace('{year}', String(new Date().getFullYear()));
-
-  return (
-    <main className="desk-stage" ref={stageRef} aria-label="Heraldic" {...Object.fromEntries(Object.entries(layout).map(([key, value]) => [`data-${key}`, value]))}>
-      <section className="monitor" aria-label="Heraldic website screen">
+  const ActivePageContent = currentPageContent;
+  return <main className="desk-stage" onClick={handleNavigation} ref={stageRef} aria-label="Heraldic" {...Object.fromEntries(Object.entries(layout).map(([key, value]) => [`data-${key}`, value]))}>
+    <div className="desk-main">
+      {chatVisible && <Suspense fallback={<aside className="chat-dock chat-panel-loading" role="status">Opening chat…</aside>}><ChatPanel copy={copy} messages={messages} busy={busy} error={error} prompt={prompt} promptRef={promptRef} onPromptChange={(value) => setPrompt(value.slice(0, PROMPT_MAX_LENGTH))} onSubmit={sendMessage} onClose={() => setChatVisible(false)} /></Suspense>}
+      <button className="chat-launcher" type="button" onClick={() => { setChatVisible(true); promptRef.current?.focus(); }} aria-label="Open Artem AI chat">Chat</button>
+      <div className="workstation"><section className="monitor" aria-label="Heraldic website screen">
         <div className="monitor-top" aria-hidden="true"><span /></div>
         <div className="screen">
           <header className="screen-header">
             <div className="header-stripes" aria-hidden="true" />
-            <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026logo.png" alt="" /><span>HERALDIC</span></a>
-            <nav aria-label="Screen navigation">{navItems.map(([id, label]) => <a key={id} href={navHref(id)} aria-current={id === page ? 'page' : undefined}>{copy[label]}</a>)}</nav>
+            <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026logo.webp" alt="" /><span>HERALDIC</span></a>
+            <nav aria-label="Screen navigation">
+              <a href="/#overview" aria-current={currentPage === 'home' ? 'page' : undefined}>{copy.overview}</a>
+              <div className="nav-menu"><a href="/heraldic/" aria-current={currentPage === 'heraldic' ? 'page' : undefined}>{copy.about}</a><div className="nav-submenu"><a href="/leadership/" aria-current={currentPage === 'leadership' ? 'page' : undefined}>Leadership</a></div></div>
+              <a href="/mea/" aria-current={currentPage === 'mea' ? 'page' : undefined}>{copy.meaLabel}</a>
+              <a href="/media/" aria-current={currentPage === 'media' ? 'page' : undefined}>{copy.mediaLabel}</a>
+            </nav>
           </header>
           <div className="screen-scroll" ref={screenRef}>
-            {page === 'home' && <>
-            <section id="overview" className="screen-section home-mission">
-              <h1>{copy.heroTitle}</h1>
-              <img className="mission-logo" src="/HERALDIC2026logo.png" alt={copy.logoAlt} width="320" height="320" fetchPriority="high" />
-              <div className="mission-intro"><p className="eyebrow">{copy.ourMission}</p><p className="lede">{copy.heroBody}</p></div>
-              <div className="screen-actions"><a className="primary-action" href="/mea/">{copy.ctaLabel} <span aria-hidden="true">↗</span></a><a className="text-action" href="/media/">{copy.mediaLabel} <span aria-hidden="true">↗</span></a></div>
-            </section>
-            <section id="about" className="screen-section about-section"><p className="eyebrow">{copy.heraldicLabel}</p><div className="about-layout"><div><h2>{copy.missionTitle}</h2><p>{copy.missionBody}</p></div><div className="quote-block">{copy.missionQuote}</div></div></section>
-            <section id="privacy" className="screen-section privacy-section"><p className="eyebrow">{copy.privacyLabel}</p><div className="privacy-layout"><h2>{copy.privacyTitle}</h2><div><p>{copy.privacyBodyOne}</p><p>{copy.privacyBodyTwo}</p></div></div></section>
-            </>}
-            {page === 'mea' && <>
-            <section id="mea" className="screen-section mea-section">
-              <div className="mea-heading"><div><p className="eyebrow">{copy.meaEyebrow}</p><h1>{copy.meaTitle}</h1><p className="mea-subtitle">{copy.meaSubtitle}</p><p className="mea-intro">{copy.meaIntro}</p></div><figure className="mea-hero-image"><img src="/mea/beta-cloud-computer.png" alt={copy.meaDesktopAlt} /></figure></div>
-              <div className="mea-feature-grid">
-                <article><span>01</span><p>{copy.meaFeatureOne}</p></article><article><span>02</span><p>{copy.meaFeatureTwo}</p></article><article><span>03</span><p>{copy.meaFeatureThree}</p></article><article><span>04</span><p>{copy.meaFeatureFour}</p></article><article><span>05</span><p>{copy.meaFeatureFive}</p></article><article><span>06</span><p>{copy.meaFeatureSix}</p></article>
-              </div>
-              <div className="mea-heritage-strip" aria-label={copy.meaHeritageLabel}><img src="/mea/web3.png" alt={copy.meaWeb3Alt} /><img src="/mea/ipv6-launch.png" alt={copy.meaIpv6Alt} /></div>
-            </section>
-            <section id="how-it-works" className="screen-section story-section">
-              <p className="eyebrow">{copy.originalIdea}</p><div className="section-heading"><h2>{copy.capabilityTitle}</h2><p>{copy.capabilityBody}</p></div>
-              <div className="capability-grid"><article><span>01</span><h3>{copy.capabilityOneTitle}</h3><p>{copy.capabilityOneBody}</p></article><article><span>02</span><h3>{copy.capabilityTwoTitle}</h3><p>{copy.capabilityTwoBody}</p></article><article><span>03</span><h3>{copy.capabilityThreeTitle}</h3><p>{copy.capabilityThreeBody}</p></article></div>
-            </section>
-            <section id="systems" className="screen-section systems-section">
-              <div className="section-heading"><p className="eyebrow">{copy.meaSystems}</p><h2>{copy.systemsTitle}</h2><p>{copy.systemsBody}</p></div>
-              <div className="system-grid"><article className="system-card"><div className="system-number">01</div><p className="card-kicker">{copy.eleetName}</p><h3>{copy.eleetTitle}</h3><p>{copy.eleetBody}</p><ul><li>{copy.eleetBulletOne}</li><li>{copy.eleetBulletTwo}</li><li>{copy.eleetBulletThree}</li></ul></article><article className="system-card"><div className="system-number">02</div><p className="card-kicker">{copy.powerName}</p><h3>{copy.powerTitle}</h3><p>{copy.powerBody}</p><ul><li>{copy.powerBulletOne}</li><li>{copy.powerBulletTwo}</li><li>{copy.powerBulletThree}</li></ul></article><article className="system-card"><div className="system-number">03</div><p className="card-kicker">{copy.newbieName}</p><h3>{copy.newbieTitle}</h3><p>{copy.newbieBody}</p><ul><li>{copy.newbieBulletOne}</li><li>{copy.newbieBulletTwo}</li><li>{copy.newbieBulletThree}</li></ul></article></div>
-            </section>
-            </>}
-            {page === 'media' && <section id="media" className="screen-section media-section">
-              <p className="eyebrow">{copy.mediaEyebrow}</p><h1>{copy.mediaTitle}</h1><p className="lede">{copy.mediaIntro}</p>
-              <h2>{copy.mediaPostersHeading}</h2><div className="media-grid">
-                {mediaPosters.map(([file, title, alt]) => <article className="media-card" key={file}>
-                  <button className="poster-preview media-open" type="button" onClick={() => setSelectedMedia({ file, title: copy[title], alt: copy[alt] })} aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></button>
-                  <h2>{copy[title]}</h2>
-                </article>)}
-              </div><p className="mea-note">{copy.mediaNote}</p>
-              <h2>{copy.mediaGalleryHeading}</h2><p>{copy.mediaGalleryIntro}</p>
-              <div className="image-gallery">{mediaImages.map(([file, title, alt]) => <figure className="gallery-card" key={file}><button className="media-open" type="button" onClick={() => setSelectedMedia({ file, title: copy[title], alt: copy[alt] })} aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></button><figcaption>{copy[title]}</figcaption></figure>)}</div>
-            </section>}
+            <Suspense fallback={<div className="page-loading" role="status">Loading page…</div>}>{ActivePageContent && <ActivePageContent copy={copy} />}</Suspense>
           </div>
-          {selectedMedia && <div className="screen-media-viewer" role="dialog" aria-modal="true" aria-label={selectedMedia.title}>
-            <div className="screen-media-viewer-panel"><button className="media-viewer-close" type="button" onClick={() => setSelectedMedia(null)} aria-label="Close image">×</button><img src={`/media/${selectedMedia.file}`} alt={selectedMedia.alt} /><p>{selectedMedia.title}</p></div>
-          </div>}
           <div className="screen-footer" aria-hidden="true" />
         </div>
         <div className="monitor-stand" aria-hidden="true"><div /></div>
       </section>
-
-      <footer className="keyboard-footer" aria-label="Heraldic keyboard and Artem AI">
-        <div className="keyboard-shell">
-          <div className="keyboard-topline">{keyboardVisible ? <button type="button" className="keyboard-close" onClick={() => setKeyboardVisible(false)} aria-label="Close keyboard">×</button> : <button type="button" className="keyboard-reopen" onClick={() => setKeyboardVisible(true)}>Open keyboard</button>}</div>
-          <div className={`keyboard-body chat-open${keyboardVisible ? '' : ' keyboard-closed'}`}>
-            <section className="chat-panel is-open" aria-label="Chat with Artem AI">
-              <div className="chat-messages" aria-live="polite">
-                {messages.slice(-5).map((message, index) => <p className={`chat-message ${message.role}`} key={`${index}-${message.text.slice(0, 15)}`}><strong>{message.role === 'assistant' ? copy.artemName : copy.youLabel}</strong>{message.text}</p>)}
-                {busy && <p className="chat-message assistant"><strong>ARTEM AI</strong>{copy.typingLabel}</p>}
-              </div>
-              {error && <p className="chat-error" role="alert">{error}</p>}
-              <form className="prompt-form" onSubmit={sendMessage}>
-                <label className="sr-only" htmlFor="artem-prompt">Message Artem AI</label>
-                <input id="artem-prompt" ref={promptRef} value={prompt} onChange={(event) => setPrompt(event.target.value.slice(0, PROMPT_MAX_LENGTH))} maxLength={PROMPT_MAX_LENGTH} aria-describedby="artem-prompt-help" placeholder={copy.promptPlaceholder} disabled={busy} />
-                <span id="artem-prompt-help" className="sr-only">Maximum {PROMPT_MAX_LENGTH} characters. Links are not allowed.</span>
-                <button type="submit" disabled={busy || !prompt.trim()}>{copy.sendLabel}</button>
-              </form>
-            </section>
-            {keyboardVisible && <div className="keyboard" role="group" aria-label="On-screen typing keyboard">
-              {keys.map((row, index) => <div className={`key-row row-${index + 1}`} key={row.join('')}>{row.map((key) => <button key={key} onClick={() => typeKey(key)} aria-label={`Type ${key}`}>{key}</button>)}</div>)}
-              <div className="key-row bottom-row"><button className="utility-key" onClick={() => typeKey('⌫')} aria-label="Delete last character">⌫</button><button className="wide-key" onClick={() => typeKey('SPACE')}>SPACE</button><button className="utility-key" onClick={() => sendMessage({ preventDefault() {} })} aria-label="Send prompt">↵</button></div>
-            </div>}
-          </div>
-          <div className="keyboard-footer-line"><span>{translatedFooter}</span><span>{storageNotice} {previousDesign && <button type="button" disabled={busy} onClick={undoDesign}>Undo design</button>} <button type="button" disabled={busy} onClick={resetDesign}>Reset design</button></span></div>
-        </div>
-      </footer>
-    </main>
-  );
+      <VirtualKeyboard visible={keyboardVisible} onClose={() => setKeyboardVisible(false)} onOpen={() => setKeyboardVisible(true)} onType={typeKey} onSend={() => sendMessage({ preventDefault() {} })} />
+      </div>
+    </div>
+      <footer className="site-footer"><span>{translatedFooter}</span><span>{storageNotice} {previousDesign && <button type="button" disabled={busy} onClick={undoDesign}>Undo design</button>} <button type="button" disabled={busy} onClick={resetDesign}>Reset design</button></span></footer>
+  </main>;
 }

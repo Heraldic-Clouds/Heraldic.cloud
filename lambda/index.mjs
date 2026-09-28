@@ -17,7 +17,7 @@ const contentTypes = {
   '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json',
 };
 export const securityHeaders = {
-  'Content-Security-Policy': "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests",
+  'Content-Security-Policy': "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://www.youtube-nocookie.com; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests",
   'Referrer-Policy': 'no-referrer', 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cross-Origin-Opener-Policy': 'same-origin', 'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
 };
@@ -187,9 +187,9 @@ async function chatHandler(event) {
 async function staticHandler(event, method) {
   if (!['GET', 'HEAD'].includes(method)) return { statusCode: 405, headers: { ...securityHeaders, Allow: 'GET, HEAD' }, body: '' };
   const path = event.rawPath || event.path || '/';
-  const redirects = { '/mea': '/mea/', '/mea/index.html': '/mea/', '/media': '/media/', '/media/index.html': '/media/', '/index.html': '/' };
+  const redirects = { '/mea': '/mea/', '/mea/index.html': '/mea/', '/media': '/media/', '/media/index.html': '/media/', '/heraldic': '/heraldic/', '/heraldic/index.html': '/heraldic/', '/leadership': '/leadership/', '/leadership/index.html': '/leadership/', '/index.html': '/' };
   if (Object.hasOwn(redirects, path)) return { statusCode: 308, headers: { ...securityHeaders, Location: redirects[path] }, body: '' };
-  const requested = safePath(['/mea/', '/media/'].includes(path) ? `${path}index.html` : path);
+  const requested = safePath(['/mea/', '/media/', '/heraldic/', '/leadership/'].includes(path) ? `${path}index.html` : path);
   if (!requested) return { statusCode: 400, headers: securityHeaders, body: 'Bad request' };
   const candidate = resolve(distDirectory, requested);
   if (candidate !== distDirectory && !candidate.startsWith(`${distDirectory}${sep}`)) return { statusCode: 400, headers: securityHeaders, body: 'Bad request' };

@@ -1,29 +1,37 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { render } from '../.prerender/entry-server.js';
+
 const template = await readFile('dist/index.html', 'utf8');
 const origin = 'https://www.heraldic.cloud';
-for (const page of ['home', 'mea', 'media']) {
-  const path = page === 'home' ? '/' : `/${page}/`;
-  const url = origin + path;
-  const title = page === 'home' ? 'Heraldic | Humane AI, Cloud Computing & AI Governance' : page === 'media' ? 'Heraldic Media | MEA Posters & Cloud Desktop Archive' : 'Mise En Abyme (MEA) | Heraldic Cloud Desktop';
-  const description = page === 'home' ? 'Heraldic builds humane AI, AI governance solutions, cloud computing, business automation, gaming cloud desktops and AI social media in service of humanity.' : page === 'media' ? 'View Heraldic’s NVIDIA GTC conference posters and archival cloud desktop, graphics benchmark, and 3D mapping screenshots.' : 'Explore Mise En Abyme cloud desktop services for cloud computing, gaming, work, learning and access.';
+const pageDetails = {
+  home: { path: '/', name: 'Heraldic', title: 'Heraldic | Humane AI, Cloud Computing & AI Governance', description: 'Heraldic builds humane AI, AI governance solutions, cloud computing, business automation, gaming cloud desktops and AI social media in service of humanity.', image: 'HERALDIC2026logo.webp', imageAlt: 'Heraldic company logo' },
+  mea: { path: '/mea/', name: 'Mise En Abyme', title: 'Mise En Abyme (MEA) | Heraldic Cloud Desktop', description: 'Explore Mise En Abyme cloud desktop services for cloud computing, gaming, work, learning and access.', image: 'mea/miseenabyme.png', imageAlt: 'Mise En Abyme logo' },
+  media: { path: '/media/', name: 'Media', title: 'Heraldic Media | MEA Posters & Cloud Desktop Archive', description: 'View Heraldic’s NVIDIA GTC conference posters and cloud desktop, graphics benchmark, and 3D mapping screenshots.', image: 'media/gtc2018-mea-poster-preview.jpg', imageAlt: 'NVIDIA GTC 2018 Heraldic cloud desktop poster' },
+  heraldic: { path: '/heraldic/', name: 'About Heraldic', title: 'Heraldic History | From Cloud Computing to AI', description: 'Explore Heraldic’s history from the 2013 Mise En Abyme cloud desktop idea and early prototypes through NVIDIA GTC research and the company’s transition to AI.', image: 'mea/mea-effect.jpg', imageAlt: 'Early Mise En Abyme cloud-computing concept artwork' },
+  leadership: { path: '/leadership/', name: 'Leadership', title: 'Leadership | Heraldic', description: 'Meet Artem D., Heraldic founder, computer science graduate, NVIDIA GTC research presenter, and CompTIA cloud technology subject matter expert.', image: 'mea/profile.jpeg', imageAlt: 'Portrait of Heraldic founder Artem D.' },
+};
+
+for (const [page, details] of Object.entries(pageDetails)) {
+  const url = origin + details.path;
+  const organization = { '@type': 'Organization', '@id': origin + '/#organization', name: 'Heraldic Clouds Inc.', url: origin + '/', logo: origin + '/HERALDIC2026logo.webp', description: 'Heraldic builds humane AI, AI governance solutions and cloud computing services in service of humanity.', address: { '@type': 'PostalAddress', streetAddress: '23515 NE Novelty Hill Rd Ste B221 PMB 267', addressLocality: 'Redmond', addressRegion: 'WA', postalCode: '98053', addressCountry: 'US' } };
   const schema = { '@context': 'https://schema.org', '@graph': [
-    { '@type': 'Organization', '@id': origin + '/#organization', name: 'Heraldic Clouds Inc.', url: origin + '/', logo: origin + '/HERALDIC2026.png', description: 'Heraldic builds humane AI, AI governance solutions and cloud computing services in service of humanity.', address: { '@type': 'PostalAddress', streetAddress: '23515 NE Novelty Hill Rd Ste B221 PMB 267', addressLocality: 'Redmond', addressRegion: 'WA', postalCode: '98053', addressCountry: 'US' } },
+    organization,
     { '@type': 'WebSite', '@id': origin + '/#website', name: 'Heraldic', url: origin + '/', inLanguage: 'en-US', publisher: { '@id': origin + '/#organization' } },
-    { '@type': 'WebPage', '@id': url + '#webpage', name: title, description, url, inLanguage: 'en-US', isPartOf: { '@id': origin + '/#website' }, about: { '@id': origin + '/#organization' } },
-    ...(page !== 'home' ? [{ '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Heraldic', item: origin + '/' }, { '@type': 'ListItem', position: 2, name: page === 'mea' ? 'MEA' : 'Media', item: url }] }] : [])
+    { '@type': 'WebPage', '@id': url + '#webpage', name: details.title, description: details.description, url, inLanguage: 'en-US', isPartOf: { '@id': origin + '/#website' }, about: { '@id': origin + '/#organization' } },
+    ...(page === 'leadership' ? [{ '@type': 'Person', '@id': url + '#artem-d', name: 'Artem D.', image: origin + '/mea/profile.jpeg', alumniOf: { '@type': 'CollegeOrUniversity', name: 'Bellevue College' }, worksFor: { '@id': origin + '/#organization' }, knowsAbout: ['Computer Science', 'Cloud technologies', 'AI governance'] }] : []),
+    ...(page !== 'home' ? [{ '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Heraldic', item: origin + '/' }, { '@type': 'ListItem', position: 2, name: details.name, item: url }] }] : []),
   ] };
   const metadata = `<link rel="canonical" href="${url}" />
     <meta property="og:type" content="website" /><meta property="og:site_name" content="Heraldic" />
-    <meta property="og:title" content="${title}" /><meta property="og:description" content="${description}" />
-    <meta property="og:url" content="${url}" /><meta property="og:image" content="${origin}/${page === 'media' ? 'media/gtc2018-mea-poster-preview.jpg' : 'HERALDIC2026.png'}" />
-    <meta property="og:image:alt" content="${page === 'media' ? 'NVIDIA GTC 2018 Heraldic cloud desktop poster' : 'Heraldic company logo'}" /><meta property="og:locale" content="en_US" />
-    <meta name="twitter:card" content="summary" /><meta name="twitter:title" content="${title}" />
-    <meta name="twitter:description" content="${description}" /><meta name="twitter:image" content="${origin}/${page === 'media' ? 'media/gtc2018-mea-poster-preview.jpg' : 'HERALDIC2026.png'}" />
-    <meta name="twitter:image:alt" content="${page === 'media' ? 'NVIDIA GTC 2018 Heraldic cloud desktop poster' : 'Heraldic company logo'}" />
+    <meta property="og:title" content="${details.title}" /><meta property="og:description" content="${details.description}" />
+    <meta property="og:url" content="${url}" /><meta property="og:image" content="${origin}/${details.image}" />
+    <meta property="og:image:alt" content="${details.imageAlt}" /><meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="${details.title}" />
+    <meta name="twitter:description" content="${details.description}" /><meta name="twitter:image" content="${origin}/${details.image}" />
+    <meta name="twitter:image:alt" content="${details.imageAlt}" />
     <script type="application/ld+json">${JSON.stringify(schema).replaceAll('<', '\\u003c')}</script>`;
-  const html = template.replace(/<title>.*?<\/title>/, `<title>${title}</title>`).replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${description}" />`).replace('</head>', metadata + '\n</head>').replace('<div id="root"></div>', () => `<div id="root">${render(page)}</div>`);
-  const folder = page === 'home' ? 'dist' : `dist/${page}`;
+  const html = template.replace(/<title>.*?<\/title>/, `<title>${details.title}</title>`).replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${details.description}" />`).replace('</head>', metadata + '\n</head>').replace('<div id="root"></div>', () => `<div id="root">${render(page)}</div>`);
+  const folder = page === 'home' ? 'dist' : `dist${details.path.slice(0, -1)}`;
   await mkdir(folder, { recursive: true });
   await writeFile(folder + '/index.html', html);
 }

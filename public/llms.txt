@@ -7,6 +7,8 @@ The company is committed to technology aligned with the values of humanity rathe
 ## Pages
 
 - [Heraldic home](https://www.heraldic.cloud/): Company overview, mission, privacy approach, and navigation.
+- [About Heraldic](https://www.heraldic.cloud/heraldic/): A timeline of Heraldic and Mise En Abyme from 2013 through the 2026 transition to AI.
+- [Leadership](https://www.heraldic.cloud/leadership/): Biography of founder Artem D.
 - [Media](https://www.heraldic.cloud/media/): Three NVIDIA GTC conference poster images and an 18-image cloud desktop, graphics benchmark, and 3D mapping archive. No PDF downloads are provided.
 - [Mise En Abyme (MEA)](https://www.heraldic.cloud/mea/): Mise En Abyme cloud desktop services, features, and technology.
 - [MEA plain-text reference](https://www.heraldic.cloud/mea.md): Markdown version of the MEA services.
@@ -18,3 +20,4 @@ The company is committed to technology aligned with the values of humanity rathe
 - The Heraldic site presents the company's mission to democratize technology and ensure prosperety for all humanity.
 - Heraldic's services and goals include liberating technology through cloud computing, business automation, gaming cloud desktops, AI social media, and building AGI.
 - Artem AI can explain Heraldic's commitments to humane AI, AI governance, open source, Web3.0, blockchain, privacy, anti-tracking, distributed apps, and transparency.
+- The Leadership page states that Artem D. graduated from Bellevue College with a Computer Science degree, founded several startups, presented research posters at NVIDIA GTC two years in a row, and was recognized by CompTIA as a cloud technologies Subject Matter Expert.
