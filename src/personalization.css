@@ -11,11 +11,18 @@
 .media-card { min-width: 0; padding: 1.15rem; border: 1px solid var(--palette-muted, #426b7e); border-radius: 14px; background: var(--palette-card, #fff); }
 .poster-preview { display: block; margin-bottom: 1.25rem; border-radius: 6px; overflow: hidden; background: #fff; }
 .poster-preview img { display: block; width: 100%; height: auto; aspect-ratio: 660 / 525; object-fit: contain; }
+.media-open { display: block; width: 100%; padding: 0; border: 0; color: inherit; cursor: zoom-in; }
 .media-card h2 { font-size: clamp(1.3rem, 2vw, 1.85rem); line-height: 1.15; letter-spacing: -.035em; }
 .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 1rem; margin-block: 1.5rem 2rem; }
 .gallery-card { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--palette-muted, #426b7e); border-radius: 12px; background: var(--palette-card, #fff); }
 .gallery-card a { display: grid; aspect-ratio: 16 / 10; place-items: center; overflow: hidden; background: #e7f4f8; }
 .gallery-card img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.screen-media-viewer { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: clamp(1rem, 4vw, 3rem); background: rgba(4, 25, 38, .9); }
+.screen-media-viewer-panel { position: relative; display: grid; place-items: center; width: min(100%, 1000px); max-height: 100%; padding: 2.5rem 1rem 1rem; border: 1px solid rgba(190, 236, 246, .35); border-radius: 12px; background: #0b3043; box-shadow: 0 18px 50px rgba(0, 0, 0, .35); }
+.screen-media-viewer-panel img { display: block; max-width: 100%; max-height: min(72vh, 650px); object-fit: contain; }
+.screen-media-viewer-panel p { margin: .7rem 0 0; color: #c9edf5; font-size: .75rem; text-align: center; }
+.media-viewer-close { position: absolute; top: .6rem; right: .7rem; width: 1.8rem; height: 1.8rem; border: 1px solid #8fc8d5; border-radius: 50%; color: #e5f8fc; background: transparent; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+.media-viewer-close:hover { background: rgba(255,255,255,.14); }
 .gallery-card figcaption { padding: .75rem .85rem; font-size: .85rem; }
 [data-corners="square"] .gallery-card { border-radius: 0; }
 [data-cards="list"] .media-grid { grid-template-columns: minmax(0, 1fr); }

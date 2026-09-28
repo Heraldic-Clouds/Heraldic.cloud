@@ -15,7 +15,7 @@ const mediaPosters = [
   ['gtc2018-mea-poster-preview.jpg', 'gtc2018PosterTitle', 'gtc2018PosterAlt'],
 ];
 const mediaImages = [
-  ['alter-ego-01.png', 'alterEgoOneTitle', 'alterEgoOneAlt'], ['alter-ego-02.png', 'alterEgoTwoTitle', 'alterEgoTwoAlt'], ['alter-ego-03.png', 'alterEgoThreeTitle', 'alterEgoThreeAlt'], ['alter-ego-04.png', 'alterEgoFourTitle', 'alterEgoFourAlt'], ['alter-ego-06.jpg', 'alterEgoSixTitle', 'alterEgoSixAlt'], ['alter-ego-07.jpg', 'alterEgoSevenTitle', 'alterEgoSevenAlt'],
+  ['alter-ego-02.png', 'alterEgoTwoTitle', 'alterEgoTwoAlt'], ['alter-ego-03.png', 'alterEgoThreeTitle', 'alterEgoThreeAlt'], ['alter-ego-04.png', 'alterEgoFourTitle', 'alterEgoFourAlt'], ['alter-ego-06.jpg', 'alterEgoSixTitle', 'alterEgoSixAlt'], ['alter-ego-07.jpg', 'alterEgoSevenTitle', 'alterEgoSevenAlt'],
   ['cnn-nvidia-demo.png', 'cnnNvidiaTitle', 'cnnNvidiaAlt'], ['cnn-game-demo.png', 'cnnGameTitle', 'cnnGameAlt'], ['google-earth-mckinley.png', 'mckinleyTitle', 'mckinleyAlt'], ['google-earth-beaver-mesa.png', 'beaverMesaTitle', 'beaverMesaAlt'], ['benchmark-standard.png', 'benchmarkTitle', 'benchmarkAlt'], ['google-earth-bryce.png', 'bryceTitle', 'bryceAlt'], ['benchmark-extreme.png', 'benchmarkExtremeTitle', 'benchmarkExtremeAlt'], ['google-earth-canyonlands.png', 'canyonlandsTitle', 'canyonlandsAlt'], ['google-earth-glacier.png', 'glacierTitle', 'glacierAlt'], ['google-earth-grand-teton.png', 'grandTetonTitle', 'grandTetonAlt'], ['google-earth-kings-canyon.png', 'kingsCanyonTitle', 'kingsCanyonAlt'], ['google-earth-zion.png', 'zionTitle', 'zionAlt'],
 ];
 const navHref = (id) => ['mea', 'media'].includes(id) ? `/${id}/` : ['how-it-works', 'systems'].includes(id) ? `/mea/#${id}` : `/#${id}`;
@@ -43,6 +43,7 @@ export default function App({ page = 'home' }) {
   const [loaded, setLoaded] = useState(false);
   const [previousDesign, setPreviousDesign] = useState(null);
   const [storageNotice, setStorageNotice] = useState('This site is not tracking you. Design saved only in this browser. No cookies.');
+  const [selectedMedia, setSelectedMedia] = useState(null);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -83,6 +84,12 @@ export default function App({ page = 'home' }) {
     }
     for (const key of ['keyboard', 'key', 'accent']) stage.style.setProperty(`--on-${key}`, foreground((theme || defaultPalette)[key]));
   }, [theme]);
+  useEffect(() => {
+    if (!selectedMedia) return undefined;
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setSelectedMedia(null); };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [selectedMedia]);
 
   const goTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const typeKey = (key) => {
@@ -186,14 +193,17 @@ export default function App({ page = 'home' }) {
               <p className="eyebrow">{copy.mediaEyebrow}</p><h1>{copy.mediaTitle}</h1><p className="lede">{copy.mediaIntro}</p>
               <h2>{copy.mediaPostersHeading}</h2><div className="media-grid">
                 {mediaPosters.map(([file, title, alt]) => <article className="media-card" key={file}>
-                  <a className="poster-preview" href={`/media/${file}`} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></a>
+                  <button className="poster-preview media-open" type="button" onClick={() => setSelectedMedia({ file, title: copy[title], alt: copy[alt] })} aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></button>
                   <h2>{copy[title]}</h2>
                 </article>)}
               </div><p className="mea-note">{copy.mediaNote}</p>
               <h2>{copy.mediaGalleryHeading}</h2><p>{copy.mediaGalleryIntro}</p>
-              <div className="image-gallery">{mediaImages.map(([file, title, alt]) => <figure className="gallery-card" key={file}><a href={`/media/${file}`} target="_blank" rel="noopener noreferrer" aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></a><figcaption>{copy[title]}</figcaption></figure>)}</div>
+              <div className="image-gallery">{mediaImages.map(([file, title, alt]) => <figure className="gallery-card" key={file}><button className="media-open" type="button" onClick={() => setSelectedMedia({ file, title: copy[title], alt: copy[alt] })} aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></button><figcaption>{copy[title]}</figcaption></figure>)}</div>
             </section>}
           </div>
+          {selectedMedia && <div className="screen-media-viewer" role="dialog" aria-modal="true" aria-label={selectedMedia.title}>
+            <div className="screen-media-viewer-panel"><button className="media-viewer-close" type="button" onClick={() => setSelectedMedia(null)} aria-label="Close image">×</button><img src={`/media/${selectedMedia.file}`} alt={selectedMedia.alt} /><p>{selectedMedia.title}</p></div>
+          </div>}
           <div className="screen-footer" aria-hidden="true" />
         </div>
         <div className="monitor-stand" aria-hidden="true"><div /></div>
