@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const MediaViewer = lazy(() => import('../components/MediaViewer.jsx'));
 const posters = [
@@ -13,6 +14,8 @@ const gallery = [
 
 export default function MediaPage({ copy }) {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [screenElement, setScreenElement] = useState(null);
+  useEffect(() => { setScreenElement(document.querySelector('.screen')); }, []);
   const openImage = (file, title, alt) => setSelectedImage({ src: `/media/${file}`, title: copy[title], alt: copy[alt] });
 
   return <section id="media" className="screen-section media-section">
@@ -25,6 +28,6 @@ export default function MediaPage({ copy }) {
     </div><p className="mea-note">{copy.mediaNote}</p>
     <h2>{copy.mediaGalleryHeading}</h2><p>{copy.mediaGalleryIntro}</p>
     <div className="image-gallery">{gallery.map(([file, title, alt]) => <figure className="gallery-card" key={file}><button className="media-open" type="button" onClick={() => openImage(file, title, alt)} aria-label={`${copy.openImage}: ${copy[title]}`}><img src={`/media/${file}`} alt={copy[alt]} loading="lazy" decoding="async" /></button><figcaption>{copy[title]}</figcaption></figure>)}</div>
-    {selectedImage && <Suspense fallback={<div className="media-viewer-loading" role="status">Opening image…</div>}><MediaViewer image={selectedImage} onClose={() => setSelectedImage(null)} /></Suspense>}
+    {selectedImage && screenElement && createPortal(<Suspense fallback={<div className="screen-media-viewer media-viewer-loading" role="status">Opening image…</div>}><MediaViewer image={selectedImage} onClose={() => setSelectedImage(null)} /></Suspense>, screenElement)}
   </section>;
 }

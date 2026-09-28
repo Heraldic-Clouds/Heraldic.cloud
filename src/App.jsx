@@ -32,6 +32,7 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
   const [chatVisible, setChatVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(page);
   const [currentPageContent, setCurrentPageContent] = useState(() => PageContent);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -63,6 +64,7 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
   }, []);
   useEffect(() => {
     const handleHistoryNavigation = () => {
+      setMobileMenuOpen(false);
       const destination = new URL(window.location.href);
       const nextPage = resolvePagePath(destination.pathname);
       if (!nextPage) return;
@@ -127,6 +129,7 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
     const destination = new URL(anchor.href, window.location.href);
     if (destination.origin !== window.location.origin || !resolvePagePath(destination.pathname)) return;
     event.preventDefault();
+    setMobileMenuOpen(false);
     if (destination.href !== window.location.href) navigateTo(destination);
   };
   const typeKey = (key) => {
@@ -191,7 +194,8 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
           <header className="screen-header">
             <div className="header-stripes" aria-hidden="true" />
             <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026logo.webp" alt="" /><span>HERALDIC</span></a>
-            <nav aria-label="Screen navigation">
+            <button className="mobile-nav-toggle" type="button" aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={mobileMenuOpen} aria-controls="screen-navigation" onClick={() => setMobileMenuOpen((open) => !open)}><span /><span /><span /></button>
+            <nav id="screen-navigation" className={mobileMenuOpen ? 'mobile-open' : ''} aria-label="Screen navigation" onClick={() => setMobileMenuOpen(false)}>
               <a href="/#overview" aria-current={currentPage === 'home' ? 'page' : undefined}>{copy.overview}</a>
               <div className="nav-menu"><a href="/heraldic/" aria-current={currentPage === 'heraldic' ? 'page' : undefined}>{copy.about}</a><div className="nav-submenu"><a href="/leadership/" aria-current={currentPage === 'leadership' ? 'page' : undefined}>Leadership</a></div></div>
               <a href="/mea/" aria-current={currentPage === 'mea' ? 'page' : undefined}>{copy.meaLabel}</a>
