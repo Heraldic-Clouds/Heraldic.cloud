@@ -142,14 +142,14 @@ export default function App({ page = 'home' }) {
         <div className="screen">
           <header className="screen-header">
             <div className="header-stripes" aria-hidden="true" />
-            <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026.png" alt="" /><span>HERALDIC</span></a>
+            <a className="brand" href="/" aria-label="Heraldic overview"><img src="/HERALDIC2026logo.png" alt="" /><span>HERALDIC</span></a>
             <nav aria-label="Screen navigation">{navItems.map(([id, label]) => <a key={id} href={navHref(id)} aria-current={id === page ? 'page' : undefined}>{copy[label]}</a>)}</nav>
           </header>
           <div className="screen-scroll" ref={screenRef}>
             {page === 'home' && <>
             <section id="overview" className="screen-section home-mission">
               <h1>{copy.heroTitle}</h1>
-              <img className="mission-logo" src="/HERALDIC2026.png" alt={copy.logoAlt} width="320" height="320" fetchPriority="high" />
+              <img className="mission-logo" src="/HERALDIC2026logo.png" alt={copy.logoAlt} width="320" height="320" fetchPriority="high" />
               <div className="mission-intro"><p className="eyebrow">{copy.ourMission}</p><p className="lede">{copy.heroBody}</p></div>
               <div className="screen-actions"><a className="primary-action" href="/mea/">{copy.ctaLabel} <span aria-hidden="true">↗</span></a><a className="text-action" href="/media/">{copy.mediaLabel} <span aria-hidden="true">↗</span></a></div>
             </section>
