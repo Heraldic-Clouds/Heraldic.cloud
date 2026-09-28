@@ -1,11 +1,25 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Heraldic privacy-first React website
+Description: Heraldic website on a private S3 origin and CloudFront CDN with an uncached AI API.
 Parameters:
   OpenAISecretArn:
     Type: String
     Description: ARN of an AWS Secrets Manager secret containing the OpenAI API key.
+  CloudFrontCertificateArn:
+    Type: String
+    Default: ''
+    Description: Optional ACM certificate ARN in us-east-1 for www.heraldic.cloud. DNS must point to the distribution after deployment.
+Conditions:
+  UseCustomDomain: !Not [!Equals [!Ref CloudFrontCertificateArn, '']]
 Resources:
+  CloudFrontOriginSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Shared private header used to reject requests that bypass CloudFront.
+      GenerateSecretString:
+        PasswordLength: 48
+        ExcludePunctuation: true
+
   HeraldicSiteFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -21,6 +35,7 @@ Resources:
         Variables:
           OPENAI_API_KEY: !Sub '{{resolve:secretsmanager:${OpenAISecretArn}:SecretString}}'
           OPENAI_MODEL: gpt-6-luna
+          CLOUDFRONT_ORIGIN_TOKEN: !Sub '{{resolve:secretsmanager:${CloudFrontOriginSecret}:SecretString}}'
       Events:
         SiteRoot:
           Type: HttpApi
@@ -41,7 +56,286 @@ Resources:
       DefaultRouteSettings:
         ThrottlingBurstLimit: 20
         ThrottlingRateLimit: 10
+
+  StaticSiteBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  StaticSiteOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-site-s3-origin'
+        Description: CloudFront-only access to the private Heraldic static asset bucket.
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  StaticAssetCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-static-assets'
+        Comment: Cache public static assets while honoring their S3 Cache-Control headers.
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  ChatNoCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-chat-no-cache'
+        Comment: Never cache AI requests or responses.
+        DefaultTTL: 0
+        MaxTTL: 0
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: false
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  ChatOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub '${AWS::StackName}-chat-request-headers'
+        Comment: Forward the trusted viewer address and headers needed for same-origin request checks.
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - Content-Type
+            - CloudFront-Viewer-Address
+            - Origin
+            - Sec-Fetch-Site
+        CookiesConfig:
+          CookieBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: none
+
+  StaticAssetResponseHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-static-security-headers'
+        Comment: Security headers for assets delivered from the private S3 origin.
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: Cross-Origin-Resource-Policy
+              Value: same-origin
+              Override: true
+            - Header: Cross-Origin-Opener-Policy
+              Value: same-origin
+              Override: true
+            - Header: Permissions-Policy
+              Value: camera=(), geolocation=(), microphone=(), payment=(), usb=()
+              Override: true
+
+  DirectoryIndexFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-directory-index'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Redirect known page paths to their canonical trailing-slash URL.
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (/^\/(mea|media|heraldic|leadership)$/.test(uri)) {
+            return {
+              statusCode: 308,
+              statusDescription: 'Permanent Redirect',
+              headers: { location: { value: uri + '/' } }
+            };
+          }
+          return request;
+        }
+
+  HeraldicDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${AWS::StackName} website and chat CDN'
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Aliases: !If [UseCustomDomain, [www.heraldic.cloud], !Ref AWS::NoValue]
+        Origins:
+          - Id: StaticS3Origin
+            DomainName: !GetAtt StaticSiteBucket.RegionalDomainName
+            OriginAccessControlId: !Ref StaticSiteOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+          - Id: ApiGatewayOrigin
+            DomainName: !Sub '${HeraldicApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+            OriginCustomHeaders:
+              - HeaderName: X-Heraldic-Origin-Token
+                HeaderValue: !Sub '{{resolve:secretsmanager:${CloudFrontOriginSecret}:SecretString}}'
+        DefaultCacheBehavior:
+          TargetOriginId: ApiGatewayOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, POST]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: !Ref StaticAssetCachePolicy
+          Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DirectoryIndexFunction.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiGatewayOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, POST]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref ChatNoCachePolicy
+            OriginRequestPolicyId: !Ref ChatOriginRequestPolicy
+            Compress: true
+          - PathPattern: '*.png'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.jpg'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.jpeg'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.webp'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.css'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.js'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.svg'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+          - PathPattern: '*.ico'
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref StaticAssetCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
+        ViewerCertificate: !If
+          - UseCustomDomain
+          - AcmCertificateArn: !Ref CloudFrontCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  StaticSiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticSiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${StaticSiteBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${HeraldicDistribution}'
+
 Outputs:
   HeraldicUrl:
-    Description: Public site URL
-    Value: !Sub 'https://${HeraldicApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/'
+    Description: Website through CloudFront (set the optional certificate and DNS alias for the production hostname).
+    Value: !If [UseCustomDomain, 'https://www.heraldic.cloud/', !Sub 'https://${HeraldicDistribution.DomainName}/']
+  CloudFrontDomainName:
+    Description: DNS target for the website CDN; point www.heraldic.cloud here when using the custom certificate.
+    Value: !GetAtt HeraldicDistribution.DomainName
+  CloudFrontDistributionId:
+    Description: Distribution ID used by the deployment script to invalidate updated content.
+    Value: !Ref HeraldicDistribution
+  StaticSiteBucketName:
+    Description: Private S3 bucket populated by the deployment script.
+    Value: !Ref StaticSiteBucket

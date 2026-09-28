@@ -68,27 +68,34 @@ test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 40
       assert.match(result.body, /application\/ld\+json/);
       if (path === '/media/') {
         assert.match(result.body, /<title>Heraldic Media \| MEA Posters & Cloud Desktop Archive<\/title>/);
-        assert.match(result.body, /View Heraldic’s NVIDIA GTC conference posters and archival cloud desktop/);
+        assert.match(result.body, /View Heraldic’s NVIDIA GTC conference posters and cloud desktop, graphics benchmark, and 3D mapping screenshots/);
         assert.match(result.body, /media\/gtc2018-mea-poster-preview\.jpg/);
       }
       assert.match(result.headers['Content-Security-Policy'], /sha256-/);
     }
   }
+  const llms = (await handler({ rawPath: '/llms.txt' })).body;
+  assert.match(llms, /ensure prosperity for all humanity/);
+  assert.match(llms, /17-image/);
+  assert.doesNotMatch(llms, /prosperety|next-generation security|Cloud\+ certified|IPv6 Internet addresses|18-image/i);
+  const meaReference = (await handler({ rawPath: '/mea.md' })).body;
+  assert.match(meaReference, /Add computing power/);
+  assert.match(meaReference, /Newbie/);
+  assert.doesNotMatch(meaReference, /Welcome To Mise En Abyme|Cloud\+ certified|IPv6|next-gen security/i);
 });
 test('mission, media links and removed monitor label are prerendered', async () => {
   const home = (await handler({ rawPath: '/' })).body;
   assert.match(home, /Nothing is impossible/);
-  assert.match(home, /Our mission is to democratize technology and ensure prosperety for all humanity/);
-  assert.match(home, /free, democratized, humane AI/);
-  assert.match(home, /We are committed to free, democratized, humane AI aligned with the values of humanity/);
-  assert.match(home, /pioneering AI governance solutions|pioneer company in AI governance solutions/);
-  assert.match(home, /HERALDIC2026\.png/);
+  assert.match(home, /We(?:'|&#x27;)ve embarked on the journey to democratize technology and ensure prosperity for all humanity/);
+  assert.match(home, /free, humane AI/);
+  assert.match(home, /AI in service of humanity/);
+  assert.match(home, /We can help you build advanced AI agents that can automate your business at any scale/);
+  assert.match(home, /HERALDIC2026logo\.webp/);
   assert.match(home, /class="mission-logo"/);
-  assert.match(home, /class="keyboard-body chat-open"/);
-  assert.match(home, /id="artem-prompt"/);
+  assert.match(home, /class="keyboard-dock keyboard-dock-closed"/);
   assert.match(home, /This site is not tracking you/);
-  assert.match(home, /keyboard-close/);
-  assert.match(home, /class="chat-panel is-open"/);
+  assert.doesNotMatch(home, /keyboard-close/);
+  assert.match(home, /aria-label="Open Artem AI chat"/);
   assert.doesNotMatch(home, /Heraldic’s stated values/);
   assert.doesNotMatch(home, /ARTEM AI · HERALDIC CEO PERSONA/);
   assert.ok(home.indexOf('id="about"') < home.indexOf('id="privacy"'));
@@ -114,7 +121,7 @@ test('MEA presents current offerings without removed historical graphics', async
   assert.doesNotMatch(mea, /a-plus-certified|cloudplus-certified|mea-art\.jpg/);
   assert.doesNotMatch(mea, /archived rendering|feature statements below preserve|former product lineup|original|legacy/i);
   assert.match(mea, /Mise En Abyme is a desktop experience/);
-  assert.match(mea, /Three paths into the cloud/);
+  assert.match(mea, /New way to use computers/);
 });
 test('removed poster PDFs are not served by the site', async () => {
   for (const path of ['/media/GTC2017MEAposter.pdf', '/media/Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf', '/media/GTC2018MEAposter.pdf']) {
@@ -125,6 +132,18 @@ test('cross-site API calls and traversal fail closed', async () => {
   assert.equal((await handler({ rawPath: '/api/chat', httpMethod: 'POST', headers: { 'sec-fetch-site': 'cross-site' } })).statusCode, 403);
   assert.equal((await handler({ rawPath: '/api/chat', httpMethod: 'POST', headers: { origin: 'https://evil.example' } })).statusCode, 403);
   assert.equal((await handler({ rawPath: '/%2e%2e/.env.local' })).statusCode, 400);
+});
+test('AWS-origin requests require the CloudFront-only verification header', async () => {
+  const originalToken = process.env.CLOUDFRONT_ORIGIN_TOKEN;
+  process.env.CLOUDFRONT_ORIGIN_TOKEN = 'test-origin-token';
+  try {
+    assert.equal((await handler({ rawPath: '/' })).statusCode, 403);
+    assert.equal((await handler({ rawPath: '/', headers: { 'x-heraldic-origin-token': 'wrong-token' } })).statusCode, 403);
+    assert.equal((await handler({ rawPath: '/', headers: { 'x-heraldic-origin-token': 'test-origin-token' } })).statusCode, 200);
+  } finally {
+    if (originalToken === undefined) delete process.env.CLOUDFRONT_ORIGIN_TOKEN;
+    else process.env.CLOUDFRONT_ORIGIN_TOKEN = originalToken;
+  }
 });
 test('model output is validated and saved visitor designs are never forwarded', async () => {
   const originalFetch = globalThis.fetch;

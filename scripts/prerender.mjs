@@ -4,16 +4,16 @@ import { render } from '../.prerender/entry-server.js';
 const template = await readFile('dist/index.html', 'utf8');
 const origin = 'https://www.heraldic.cloud';
 const pageDetails = {
-  home: { path: '/', name: 'Heraldic', title: 'Heraldic | Humane AI, Cloud Computing & AI Governance', description: 'Heraldic builds humane AI, AI governance solutions, cloud computing, business automation, gaming cloud desktops and AI social media in service of humanity.', image: 'HERALDIC2026logo.webp', imageAlt: 'Heraldic company logo' },
+  home: { path: '/', name: 'Heraldic', title: 'Heraldic | Humane AI, Business Agents & AI Governance', description: 'Heraldic is pursuing humane AI and AI governance, and helps businesses build AI agents for automation alongside cloud computing and privacy-respecting technology.', image: 'HERALDIC2026logo.webp', imageAlt: 'Heraldic company logo' },
   mea: { path: '/mea/', name: 'Mise En Abyme', title: 'Mise En Abyme (MEA) | Heraldic Cloud Desktop', description: 'Explore Mise En Abyme cloud desktop services for cloud computing, gaming, work, learning and access.', image: 'mea/miseenabyme.png', imageAlt: 'Mise En Abyme logo' },
   media: { path: '/media/', name: 'Media', title: 'Heraldic Media | MEA Posters & Cloud Desktop Archive', description: 'View Heraldic’s NVIDIA GTC conference posters and cloud desktop, graphics benchmark, and 3D mapping screenshots.', image: 'media/gtc2018-mea-poster-preview.jpg', imageAlt: 'NVIDIA GTC 2018 Heraldic cloud desktop poster' },
   heraldic: { path: '/heraldic/', name: 'About Heraldic', title: 'Heraldic History | From Cloud Computing to AI', description: 'Explore Heraldic’s history from the 2013 Mise En Abyme cloud desktop idea and early prototypes through NVIDIA GTC research and the company’s transition to AI.', image: 'mea/mea-effect.jpg', imageAlt: 'Early Mise En Abyme cloud-computing concept artwork' },
-  leadership: { path: '/leadership/', name: 'Leadership', title: 'Leadership | Heraldic', description: 'Meet Artem D., Heraldic founder, computer science graduate, NVIDIA GTC research presenter, and CompTIA cloud technology subject matter expert.', image: 'mea/profile.jpeg', imageAlt: 'Portrait of Heraldic founder Artem D.' },
+  leadership: { path: '/leadership/', name: 'Leadership', title: 'Leadership | Heraldic', description: 'Artem D. is Heraldic’s founder, a computer science graduate, two-time NVIDIA GTC research poster presenter, and CompTIA cloud technology subject matter expert.', image: 'mea/profile.jpeg', imageAlt: 'Portrait of Heraldic founder Artem D.' },
 };
 
 for (const [page, details] of Object.entries(pageDetails)) {
   const url = origin + details.path;
-  const organization = { '@type': 'Organization', '@id': origin + '/#organization', name: 'Heraldic Clouds Inc.', url: origin + '/', logo: origin + '/HERALDIC2026logo.webp', description: 'Heraldic builds humane AI, AI governance solutions and cloud computing services in service of humanity.', address: { '@type': 'PostalAddress', streetAddress: '23515 NE Novelty Hill Rd Ste B221 PMB 267', addressLocality: 'Redmond', addressRegion: 'WA', postalCode: '98053', addressCountry: 'US' } };
+  const organization = { '@type': 'Organization', '@id': origin + '/#organization', name: 'Heraldic Clouds Inc.', url: origin + '/', logo: origin + '/HERALDIC2026logo.webp', description: 'Heraldic pursues humane AI and AI governance, and helps businesses build AI agents for automation alongside cloud computing and privacy-respecting technology.' };
   const schema = { '@context': 'https://schema.org', '@graph': [
     organization,
     { '@type': 'WebSite', '@id': origin + '/#website', name: 'Heraldic', url: origin + '/', inLanguage: 'en-US', publisher: { '@id': origin + '/#organization' } },

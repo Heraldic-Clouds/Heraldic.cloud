@@ -40,8 +40,12 @@ function safePath(requestPath) {
 }
 
 function getClientIp(event) {
+  const viewerAddress = event.headers?.['cloudfront-viewer-address'];
+  const cloudFrontAddress = typeof viewerAddress === 'string'
+    ? (viewerAddress.startsWith('[') ? viewerAddress.slice(1, viewerAddress.indexOf(']')) : viewerAddress.replace(/:\d+$/, ''))
+    : '';
   const address = event.requestContext?.http?.sourceIp || event.requestContext?.identity?.sourceIp || event.clientIp || 'unknown';
-  return String(address).slice(0, 80);
+  return String(cloudFrontAddress || address).slice(0, 80);
 }
 
 function isRateLimited(address, now = Date.now()) {
@@ -208,7 +212,15 @@ async function staticHandler(event, method) {
     }
     return {
       statusCode: 200,
-      headers: { ...headers, 'Content-Type': contentTypes[extension] || 'application/octet-stream', 'Cache-Control': requested.startsWith('assets') ? 'public, max-age=31536000, immutable' : 'no-cache' },
+      headers: {
+        ...headers,
+        'Content-Type': contentTypes[extension] || 'application/octet-stream',
+        'Cache-Control': requested.startsWith('assets/')
+          ? 'public, max-age=31536000, immutable'
+          : extension === '.html'
+            ? 'public, max-age=0, s-maxage=300, must-revalidate'
+            : 'public, max-age=300, s-maxage=86400, must-revalidate',
+      },
       isBase64Encoded: !isText,
       body: method === 'HEAD' ? '' : (isText ? data.toString('utf8') : data.toString('base64')),
     };
@@ -216,6 +228,10 @@ async function staticHandler(event, method) {
 }
 
 export async function handler(event) {
+  const expectedOriginToken = process.env.CLOUDFRONT_ORIGIN_TOKEN;
+  if (expectedOriginToken && event.headers?.['x-heraldic-origin-token'] !== expectedOriginToken) {
+    return jsonResponse(403, { error: 'Requests must use the site CDN.' });
+  }
   const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
   const path = event.rawPath || event.path || '/';
   if (path === '/api/chat') {

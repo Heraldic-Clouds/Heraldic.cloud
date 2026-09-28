@@ -1,22 +1,19 @@
 # Mise En Abyme (MEA)
 
-## Welcome To Mise En Abyme!
+## New way to use computers
 
-### YOUR Virtual Cloud Desktop
+Mise En Abyme is a desktop experience shaped by software, hardware, and the web—available from the devices people already use. The page describes cloud desktops using GPUs for everyday work, gaming, and entertainment.
 
-Mise En Abyme is a virtual cloud desktop service blending software, hardware, and the web.
+## Capabilities
 
-#### What we offer
+- Add computing power without installing physical components.
+- Make devices go further by using a hosted desktop on an older PC or lightweight device.
+- Keep a familiar desktop and access its operating environment and applications wherever an internet connection is available.
 
-- Blends Software, Hardware and the Web
-- Streams YOUR games from the cloud
-- Turns your smartphone into a desktop computer
-- Features next-gen security
-- Engineered by Cloud+ certified team
-- Uses IPv6 Internet addresses
+## Cloud desktop concepts
 
-#### Technology
+- Eleet: a personal cloud desktop for graphics-intensive work and 3D tasks.
+- Power: a virtual desktop concept for work and entertainment.
+- Newbie: a lightweight Linux environment concept for learning, creativity, and broader access to computing.
 
-- [Mise En Abyme desktop concept](https://www.heraldic.cloud/mea/beta-cloud-computer.png)
-- [Web 3.0 artwork](https://www.heraldic.cloud/mea/web3.png)
-- [World IPv6 Launch badge](https://www.heraldic.cloud/mea/ipv6-launch.png)
+The MEA page presents these capabilities and concepts; it does not provide account, purchase, or signup flows.

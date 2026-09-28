@@ -1,23 +1,23 @@
 # Heraldic Clouds Inc.
 
-> Heraldic Clouds Inc. pursues a mission to democratize technology and ensure prosperety for all humanity through free, democratized, humane AI and pioneering AI governance solutions.
+> Heraldic Clouds Inc. is pursuing a mission to democratize technology and ensure prosperity for all humanity. The company is committed to free, humane AI aligned with the values of humanity, not any single special interest group, and develops AI governance solutions.
 
-The company is committed to technology aligned with the values of humanity rather than the interests of elites; open-source software; Web3.0 and blockchain; privacy-respecting, anti-tracking apps; and distributed applications. Heraldic does not believe people’s data is gold and will never collect or sell it. Transparency is key to trust, and everything Heraldic builds is intended to serve humanity. The site has no affiliate storefront or third-party tracking.
+Heraldic’s stated commitments include open-source software, Web3.0 and blockchain, privacy-respecting and anti-tracking apps, distributed applications, and building in service of humanity. The company says it will never collect or sell visitors’ data and that transparency is key to trust. Messages submitted to Artem AI are sent to OpenAI to generate a reply; the site does not use analytics or advertising trackers.
 
 ## Pages
 
 - [Heraldic home](https://www.heraldic.cloud/): Company overview, mission, privacy approach, and navigation.
 - [About Heraldic](https://www.heraldic.cloud/heraldic/): A timeline of Heraldic and Mise En Abyme from 2013 through the 2026 transition to AI.
 - [Leadership](https://www.heraldic.cloud/leadership/): Biography of founder Artem D.
-- [Media](https://www.heraldic.cloud/media/): Three NVIDIA GTC conference poster images and an 18-image cloud desktop, graphics benchmark, and 3D mapping archive. No PDF downloads are provided.
+- [Media](https://www.heraldic.cloud/media/): Three NVIDIA GTC conference poster images and a 17-image cloud desktop, graphics benchmark, and 3D mapping gallery. No PDF downloads are provided.
 - [Mise En Abyme (MEA)](https://www.heraldic.cloud/mea/): Mise En Abyme cloud desktop services, features, and technology.
 - [MEA plain-text reference](https://www.heraldic.cloud/mea.md): Markdown version of the MEA services.
 
 ## Company and project context
 
-- MEA stands for Mise En Abyme, a virtual cloud desktop service.
-- Mise En Abyme blends software, hardware, and the web; streams games from the cloud; turns a smartphone into a desktop computer; features next-generation security; and uses IPv6 Internet addresses.
-- The Heraldic site presents the company's mission to democratize technology and ensure prosperety for all humanity.
-- Heraldic's services and goals include liberating technology through cloud computing, business automation, gaming cloud desktops, AI social media, and building AGI.
+- MEA stands for Mise En Abyme. Its page presents a cloud desktop experience that blends software, hardware, and the web.
+- The MEA page describes cloud desktops for GPU-powered everyday work, gaming, and entertainment; features include adding computing power, helping devices go further, and keeping a familiar desktop.
+- Heraldic's mission is to democratize technology and ensure prosperity for all humanity, and its home page describes building advanced AI agents to automate business tasks.
+- Heraldic's services and goals include cloud computing, business automation, gaming cloud desktops, AI social media, and building AGI.
 - Artem AI can explain Heraldic's commitments to humane AI, AI governance, open source, Web3.0, blockchain, privacy, anti-tracking, distributed apps, and transparency.
 - The Leadership page states that Artem D. graduated from Bellevue College with a Computer Science degree, founded several startups, presented research posters at NVIDIA GTC two years in a row, and was recognized by CompTIA as a cloud technologies Subject Matter Expert.
