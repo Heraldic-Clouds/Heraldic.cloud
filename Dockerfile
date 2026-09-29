@@ -6,6 +6,7 @@ RUN npm ci
 COPY index.html ./
 COPY public ./public
 COPY src ./src
+COPY shared ./shared
 COPY lambda/design.mjs ./lambda/design.mjs
 COPY lambda/prompt.mjs ./lambda/prompt.mjs
 COPY scripts ./scripts
@@ -16,6 +17,7 @@ FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 COPY lambda ./lambda
+COPY shared ./shared
 COPY --from=build /app/dist ./lambda/dist
 COPY src/site-copy.json ./lambda/site-copy.json
 COPY server.mjs ./server.mjs

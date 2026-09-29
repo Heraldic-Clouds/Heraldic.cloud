@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import siteCopy from './site-copy.json';
 import VirtualKeyboard from './components/VirtualKeyboard.jsx';
-import { pageMetadata, resolvePagePath } from './page-routes.mjs';
+import { pageMetadata, resolvePagePath, SITE_ORIGIN, pageSchema } from './page-routes.mjs';
 import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, restoreLayout, mergeLayout, inferLayoutPatch, defaultLayout, safeCopy, foreground } from '../lambda/design.mjs';
 import { PROMPT_MAX_LENGTH, validatePrompt } from '../lambda/prompt.mjs';
 
@@ -101,13 +101,17 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
     const metadata = pageMetadata[nextPage];
     if (!metadata) return;
     document.title = metadata.title;
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', new URL(metadata.path, destination.origin).href);
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', SITE_ORIGIN + metadata.path);
     document.querySelector('meta[name="description"]')?.setAttribute('content', metadata.description);
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', metadata.title);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', metadata.description);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', new URL(metadata.path, destination.origin).href);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', SITE_ORIGIN + metadata.path);
     document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', metadata.title);
     document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', metadata.description);
+    for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) document.querySelector(selector)?.setAttribute('content', `${SITE_ORIGIN}/${metadata.image}`);
+    for (const selector of ['meta[property="og:image:alt"]', 'meta[name="twitter:image:alt"]']) document.querySelector(selector)?.setAttribute('content', metadata.imageAlt);
+    const schema = document.querySelector('script[type="application/ld+json"]');
+    if (schema) schema.textContent = JSON.stringify(pageSchema(nextPage)).replaceAll('<', '\\u003c');
   };
   const navigateTo = (destination, addHistoryEntry = true) => {
     const nextPage = resolvePagePath(destination.pathname);

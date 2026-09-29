@@ -1,0 +1,16 @@
+[
+  { "id": "bbc-world", "source": "BBC News", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "articleHosts": ["bbc.com", "bbc.co.uk"], "region": "international" },
+  { "id": "bbc-us", "source": "BBC News", "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml", "articleHosts": ["bbc.com", "bbc.co.uk"], "region": "US" },
+  { "id": "bbc-asia", "source": "BBC News", "url": "https://feeds.bbci.co.uk/news/world/asia/rss.xml", "articleHosts": ["bbc.com", "bbc.co.uk"], "region": "Asia" },
+  { "id": "bbc-technology", "source": "BBC News", "url": "https://feeds.bbci.co.uk/news/technology/rss.xml", "articleHosts": ["bbc.com", "bbc.co.uk"], "region": "international" },
+  { "id": "guardian-ai", "source": "The Guardian", "url": "https://www.theguardian.com/technology/artificialintelligenceai/rss", "articleHosts": ["theguardian.com"], "region": "UK/international" },
+  { "id": "npr-politics", "source": "NPR", "url": "https://feeds.npr.org/1014/rss.xml", "articleHosts": ["npr.org"], "region": "US" },
+  { "id": "aljazeera-world", "source": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "articleHosts": ["aljazeera.com"], "region": "international" },
+  { "id": "scmp", "source": "South China Morning Post", "url": "https://www.scmp.com/rss/36/feed/", "articleHosts": ["scmp.com"], "region": "China/Asia" },
+  { "id": "ars", "source": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "articleHosts": ["arstechnica.com"], "region": "US/international" },
+  { "id": "techcrunch-ai", "source": "TechCrunch", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "articleHosts": ["techcrunch.com"], "region": "AI industry" },
+  { "id": "eu-council", "source": "Council of the European Union", "url": "https://www.consilium.europa.eu/en/rss/pressreleases.ashx", "articleHosts": ["consilium.europa.eu"], "region": "EU", "official": true },
+  { "id": "eu-commission", "source": "European Commission", "url": "https://ec.europa.eu/commission/presscorner/api/rss?language=en", "articleHosts": ["ec.europa.eu"], "region": "EU", "official": true },
+  { "id": "uk-government", "source": "UK Government", "url": "https://www.gov.uk/search/news-and-communications.atom?keywords=artificial%20intelligence", "articleHosts": ["gov.uk"], "region": "UK", "official": true },
+  { "id": "ftc", "source": "US Federal Trade Commission", "url": "https://www.ftc.gov/feeds/press-release.xml", "articleHosts": ["ftc.gov"], "region": "US", "official": true }
+]

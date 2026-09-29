@@ -6,7 +6,8 @@ Heraldic’s stated commitments include open-source software, Web3.0 and blockch
 
 ## Pages
 
-- [Heraldic home](https://www.heraldic.cloud/): Company overview, mission, privacy approach, and navigation.
+- [Heraldic home](https://www.heraldic.cloud/): Company overview, mission, privacy approach, and the Daily AI Freedom Brief.
+- [Current AI Freedom Brief](https://www.heraldic.cloud/news/current.json): One overwritten daily JSON snapshot with source links, factual summary, clearly labeled AI-written analysis, and additional AI/policy headlines. Check generated_at; an overdue snapshot is not current news. No archive or historical article pages.
 - [About Heraldic](https://www.heraldic.cloud/heraldic/): A timeline of Heraldic and Mise En Abyme from 2013 through the 2026 transition to AI.
 - [Leadership](https://www.heraldic.cloud/leadership/): Biography of founder Artem D.
 - [Media](https://www.heraldic.cloud/media/): Three NVIDIA GTC conference poster images and a 17-image cloud desktop, graphics benchmark, and 3D mapping gallery. No PDF downloads are provided.

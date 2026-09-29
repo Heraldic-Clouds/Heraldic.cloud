@@ -149,6 +149,17 @@ test('AWS-origin requests require the CloudFront-only verification header', asyn
     else process.env.CLOUDFRONT_ORIGIN_TOKEN = originalToken;
   }
 });
+
+test('local clients cannot bypass the per-IP limiter using a fake CloudFront viewer address', async () => {
+  const token = process.env.CLOUDFRONT_ORIGIN_TOKEN;
+  delete process.env.CLOUDFRONT_ORIGIN_TOKEN;
+  try {
+    for (let index = 0; index < 9; index++) {
+      const result = await handler({ rawPath: '/api/chat', httpMethod: 'POST', clientIp: 'spoofing-regression', headers: { 'cloudfront-viewer-address': `192.0.2.${index}:1234` }, body: JSON.stringify({ message: 'add cookies' }) });
+      assert.equal(result.statusCode, index < 8 ? 200 : 429);
+    }
+  } finally { if (token !== undefined) process.env.CLOUDFRONT_ORIGIN_TOKEN = token; }
+});
 test('model output is validated and saved visitor designs are never forwarded', async () => {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.OPENAI_API_KEY;

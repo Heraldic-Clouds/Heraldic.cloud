@@ -1,14 +1,34 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Heraldic website on a private S3 origin and CloudFront CDN with an uncached AI API.
+Description: Heraldic website, uncached AI chat, and one scheduled AI Freedom Brief on private S3 and CloudFront.
 Parameters:
   OpenAISecretArn:
     Type: String
     Description: ARN of an AWS Secrets Manager secret containing the OpenAI API key.
+    AllowedPattern: '^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+$'
+    ConstraintDescription: Supply the full secret ARN, not a plaintext key, secret name, or IAM wildcard.
   CloudFrontCertificateArn:
     Type: String
     Default: ''
     Description: Optional ACM certificate ARN in us-east-1 for www.heraldic.cloud. DNS must point to the distribution after deployment.
+  NewsScheduleExpression:
+    Type: String
+    Default: 'cron(0 9 * * ? *)'
+    Description: EventBridge Scheduler expression, daily at 09:00 UTC by default.
+  NewsScheduleState:
+    Type: String
+    Default: ENABLED
+    AllowedValues: [ENABLED, DISABLED]
+  NewsOpenAIModel:
+    Type: String
+    Default: gpt-6-luna
+    Description: Low-cost model supporting Responses API strict structured outputs.
+  NewsLookbackHours:
+    Type: Number
+    Default: 72
+    MinValue: 1
+    MaxValue: 168
+    Description: Maximum story age; modest overlap accommodates quieter news days and late RSS updates.
 Conditions:
   UseCustomDomain: !Not [!Equals [!Ref CloudFrontCertificateArn, '']]
 Resources:
@@ -85,6 +105,125 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
+  DailyNewsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/heraldic/${AWS::StackName}/daily-news'
+      RetentionInDays: 14
+
+  DailyNewsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PublishCurrentNewsOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${StaticSiteBucket.Arn}/news/current.json'
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref OpenAISecretArn
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt DailyNewsLogGroup.Arn
+
+  DailyNewsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: .
+      Handler: news/index.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 512
+      Timeout: 300
+      ReservedConcurrentExecutions: 1
+      Role: !GetAtt DailyNewsRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref DailyNewsLogGroup
+        LogFormat: Text
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 3600
+        MaximumRetryAttempts: 0
+      Environment:
+        Variables:
+          NEWS_BUCKET: !Ref StaticSiteBucket
+          OPENAI_SECRET_ARN: !Ref OpenAISecretArn
+          NEWS_OPENAI_MODEL: !Ref NewsOpenAIModel
+          NEWS_LOOKBACK_HOURS: !Ref NewsLookbackHours
+
+  DailyNewsScheduleGroup:
+    Type: AWS::Scheduler::ScheduleGroup
+
+  DailyNewsSchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnEquals:
+                aws:SourceArn: !GetAtt DailyNewsScheduleGroup.Arn
+      Policies:
+        - PolicyName: InvokeDailyNewsOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt DailyNewsFunction.Arn
+
+  DailyNewsSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      GroupName: !Ref DailyNewsScheduleGroup
+      ScheduleExpression: !Ref NewsScheduleExpression
+      ScheduleExpressionTimezone: UTC
+      State: !Ref NewsScheduleState
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt DailyNewsFunction.Arn
+        RoleArn: !GetAtt DailyNewsSchedulerRole.Arn
+        Input: '{}'
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 3600
+          MaximumRetryAttempts: 2
+
+  NewsSnapshotCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-current-news'
+        DefaultTTL: 300
+        MaxTTL: 300
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
   StaticAssetCachePolicy:
     Type: AWS::CloudFront::CachePolicy
     Properties:
@@ -148,6 +287,9 @@ Resources:
         Name: !Sub '${AWS::StackName}-static-security-headers'
         Comment: Security headers for assets delivered from the private S3 origin.
         SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+            Override: true
           ContentTypeOptions:
             Override: true
           FrameOptions:
@@ -222,7 +364,7 @@ Resources:
         DefaultCacheBehavior:
           TargetOriginId: ApiGatewayOrigin
           ViewerProtocolPolicy: redirect-to-https
-          AllowedMethods: [GET, HEAD, OPTIONS, POST]
+          AllowedMethods: [GET, HEAD]
           CachedMethods: [GET, HEAD]
           CachePolicyId: !Ref StaticAssetCachePolicy
           Compress: true
@@ -230,10 +372,18 @@ Resources:
             - EventType: viewer-request
               FunctionARN: !GetAtt DirectoryIndexFunction.FunctionARN
         CacheBehaviors:
+          - PathPattern: /news/current.json
+            TargetOriginId: StaticS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref NewsSnapshotCachePolicy
+            ResponseHeadersPolicyId: !Ref StaticAssetResponseHeaders
+            Compress: true
           - PathPattern: /api/*
             TargetOriginId: ApiGatewayOrigin
             ViewerProtocolPolicy: redirect-to-https
-            AllowedMethods: [GET, HEAD, OPTIONS, POST]
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
             CachedMethods: [GET, HEAD]
             CachePolicyId: !Ref ChatNoCachePolicy
             OriginRequestPolicyId: !Ref ChatOriginRequestPolicy
@@ -308,6 +458,11 @@ Resources:
             SslSupportMethod: sni-only
             MinimumProtocolVersion: TLSv1.2_2021
           - CloudFrontDefaultCertificate: true
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 10
 
   StaticSiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -316,6 +471,14 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt StaticSiteBucket.Arn, !Sub '${StaticSiteBucket.Arn}/*']
+            Condition:
+              Bool:
+                aws:SecureTransport: false
           - Sid: AllowCloudFrontReadOnly
             Effect: Allow
             Principal:
@@ -339,3 +502,12 @@ Outputs:
   StaticSiteBucketName:
     Description: Private S3 bucket populated by the deployment script.
     Value: !Ref StaticSiteBucket
+  DailyNewsFunctionName:
+    Description: Invoke this Lambda manually to generate the first/current snapshot.
+    Value: !Ref DailyNewsFunction
+  DailyNewsScheduleName:
+    Value: !Ref DailyNewsSchedule
+  DailyNewsLogGroupName:
+    Value: !Ref DailyNewsLogGroup
+  NewsSnapshotUrl:
+    Value: !If [UseCustomDomain, 'https://www.heraldic.cloud/news/current.json', !Sub 'https://${HeraldicDistribution.DomainName}/news/current.json']

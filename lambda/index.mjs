@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { defaultPalette, paletteKeys, safePalette, safeLayoutPatch, layoutOptions, safeCopy, forbiddenRequest, refusal } from './design.mjs';
 import { PROMPT_MAX_LENGTH, validatePrompt } from './prompt.mjs';
+// SAM flattens this handler; Docker/local development keep it in lambda/.
+const { NEWS_CACHE_CONTROL } = await import('./shared/news-snapshot.mjs').catch(() => import('../shared/news-snapshot.mjs'));
 
 const moduleDirectory = fileURLToPath(new URL('.', import.meta.url));
 export const distDirectory = await readFile(resolve(moduleDirectory, 'dist/index.html')).then(() => resolve(moduleDirectory, 'dist')).catch(() => resolve(moduleDirectory, '../dist'));
@@ -11,7 +13,7 @@ const siteCopyTemplate = JSON.parse(await readFile(resolve(moduleDirectory, 'sit
 const siteCopyKeys = Object.keys(siteCopyTemplate);
 const siteCopyKeySet = new Set(siteCopyKeys);
 const contentTypes = {
-  '.jpg': 'image/jpeg', '.webp': 'image/webp', '.xml': 'application/xml; charset=utf-8',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.xml': 'application/xml; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon',
   '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.png': 'image/png',
   '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json',
@@ -40,7 +42,7 @@ function safePath(requestPath) {
 }
 
 function getClientIp(event) {
-  const viewerAddress = event.headers?.['cloudfront-viewer-address'];
+  const viewerAddress = process.env.CLOUDFRONT_ORIGIN_TOKEN ? event.headers?.['cloudfront-viewer-address'] : null;
   const cloudFrontAddress = typeof viewerAddress === 'string'
     ? (viewerAddress.startsWith('[') ? viewerAddress.slice(1, viewerAddress.indexOf(']')) : viewerAddress.replace(/:\d+$/, ''))
     : '';
@@ -215,7 +217,7 @@ async function staticHandler(event, method) {
       headers: {
         ...headers,
         'Content-Type': contentTypes[extension] || 'application/octet-stream',
-        'Cache-Control': requested.startsWith('assets/')
+        'Cache-Control': requested === 'news/current.json' ? NEWS_CACHE_CONTROL : requested.startsWith('assets/')
           ? 'public, max-age=31536000, immutable'
           : extension === '.html'
             ? 'public, max-age=0, s-maxage=300, must-revalidate'

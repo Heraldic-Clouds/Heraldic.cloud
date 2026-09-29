@@ -6,6 +6,10 @@ param(
   [string]$StackName = 'heraldic-cloud',
   [string]$Region,
   [string]$CloudFrontCertificateArn,
+  [ValidatePattern("^(cron|rate)\([^'\r\n]+\)$")][string]$NewsScheduleExpression = 'cron(0 9 * * ? *)',
+  [ValidateSet('ENABLED', 'DISABLED')][string]$NewsScheduleState = 'ENABLED',
+  [string]$NewsOpenAIModel = 'gpt-6-luna',
+  [ValidateRange(1, 168)][int]$NewsLookbackHours = 72,
   [switch]$UseContainer
 )
 
@@ -43,7 +47,11 @@ $deployArguments = @(
   '--resolve-s3',
   '--no-fail-on-empty-changeset',
   '--parameter-overrides',
-  "OpenAISecretArn=$OpenAISecretArn"
+  "OpenAISecretArn=$OpenAISecretArn",
+  "NewsScheduleExpression='$NewsScheduleExpression'",
+  "NewsScheduleState=$NewsScheduleState",
+  "NewsOpenAIModel=$NewsOpenAIModel",
+  "NewsLookbackHours=$NewsLookbackHours"
 )
 if ($CloudFrontCertificateArn) { $deployArguments += "CloudFrontCertificateArn=$CloudFrontCertificateArn" }
 if ($Region) { $deployArguments += @('--region', $Region) }
@@ -55,7 +63,7 @@ if ($Region) { $stackArguments += @('--region', $Region) }
 $bucketName = & aws @stackArguments
 if ($LASTEXITCODE -ne 0 -or !$bucketName -or $bucketName -eq 'None') { throw 'Could not read the static asset bucket name from the deployed stack.' }
 
-$s3SyncArguments = @('s3', 'sync', 'dist', "s3://$bucketName", '--cache-control', 'public,max-age=300,s-maxage=86400')
+$s3SyncArguments = @('s3', 'sync', 'dist', "s3://$bucketName", '--exclude', 'news/*', '--cache-control', 'public,max-age=300,s-maxage=86400')
 $s3AssetCopyArguments = @('s3', 'cp', 'dist/assets', "s3://$bucketName/assets", '--recursive', '--cache-control', 'public,max-age=31536000,immutable')
 if ($Region) {
   $s3SyncArguments += @('--region', $Region)

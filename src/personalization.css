@@ -105,6 +105,9 @@ nav a:hover, nav a[aria-current] { border-bottom-color: currentColor; }
 .mea-systems-heading img { grid-column: 1; grid-row: 2; width: 100%; max-height: 18rem; object-fit: contain; }
 .leadership-page .leader-profile { display: grid; grid-template-columns: minmax(9rem, 15rem) 1fr; gap: clamp(1.5rem,5vw,4rem); align-items: center; max-width: 54rem; margin: 2rem auto 0; }
 .mission-art { display: block; width: min(100%, 28rem); max-height: 24rem; justify-self: center; align-self: center; border-radius: 44px; object-fit: contain; }
+.about-layout.governance-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(1rem, 4vw, 4rem); }
+.governance-layout h2 { overflow-wrap: normal; word-break: normal; }
+.governance-heading-word { white-space: nowrap; }
 .privacy-section { --privacy-image-bleed: clamp(1.2rem, 6vw, 6rem); }
 .privacy-skyline { display: block; width: calc(100% + var(--privacy-image-bleed) + var(--privacy-image-bleed)); height: auto; max-width: none; margin: 0 calc(0px - var(--privacy-image-bleed)); padding: 0; border-radius: 0; object-fit: cover; object-position: center bottom; }
 @media (max-width: 720px) { .privacy-section { --privacy-image-bleed: 1rem; } }
@@ -114,6 +117,7 @@ nav a:hover, nav a[aria-current] { border-bottom-color: currentColor; }
 .heraldic-page-values { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(43,135,160,.18); }
 .page-loading, .media-viewer-loading, .chat-panel-loading { padding: 1.5rem; color: var(--palette-muted,#4d7789); }
 @media (max-width: 720px) {
+  .about-layout.governance-layout { grid-template-columns: minmax(0, 1fr); gap: .45rem; }
   .nav-menu > a { font-size: .65rem; padding-block: .4rem; }
   .nav-submenu { left: auto; right: 0; }
   .mea-systems-heading > p:nth-child(2), .mea-systems-heading img { grid-column: auto; grid-row: auto; }

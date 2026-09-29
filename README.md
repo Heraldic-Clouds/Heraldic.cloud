@@ -68,3 +68,76 @@ Artem AI can adjust spacing, content width, typography, grid/list/two-column car
 Designs and edited copy are stored only in this browser's `localStorage` under `heraldic-design-v1`; Reset design removes that entry. No chat history or identifiers are persisted. Saved designs are not uploaded. Prompts and a short in-memory conversation are sent through the server to OpenAI with `store: false`; this is not a claim of zero provider retention. If browser storage is unavailable, changes are session-only. No cookies are created or read, no Set-Cookie header is emitted, and browser chat requests omit credentials. There are no analytics, tracking scripts, external fonts, or third-party embeds. Hosting/CDN settings must likewise avoid injecting cookies or analytics.
 
 Run `npm run check` to build both pages and run the local security/SEO regression tests. The in-memory per-IP limiter is per Lambda instance; use an edge/shared limiter for stronger distributed abuse protection.
+
+## Daily AI Freedom Brief
+
+The homepage shows a featured factual summary (25–45 words), a separately labeled AI-written freedom analysis (60–120 words), source links, and up to 20 additional relevant headlines. It remains usable if the brief is unavailable. A timestamp and an overdue warning after 36 hours distinguish the last good snapshot from current news. An open homepage checks for updates every five minutes while visible.
+
+Architecture: EventBridge Scheduler → dedicated Node.js Lambda → diverse RSS/Atom feeds → inexpensive keyword ranking and event deduplication → one OpenAI Responses structured-output selection/analysis → **one** `news/current.json` object in the existing private S3 bucket → existing CloudFront → homepage. No database, dated copies, news routes, or archive are created. Do not enable S3 versioning or replication for this object if you require strictly no retained snapshot history; the template does not enable either.
+
+The default schedule is **09:00 UTC daily**, with a 72-hour source lookback to accommodate quieter days and late feed updates. Headlines themselves can predate the generation time. The publisher caps excerpts at 600 characters and sends at most 24 candidates, not full articles. A single generation serves the brief; transient retries can mean a second API attempt. Sources include BBC, NPR, The Guardian, Al Jazeera, South China Morning Post, Ars Technica, TechCrunch, the EU Council and Commission, UK Government and US FTC. Source diversity is limited by what those feeds actually publish. Deduplication is heuristic, not a guarantee that every differently worded report of the same event will be caught.
+
+The model instructions require evidence-based reporting, acknowledge stated regulatory rationales, distinguish conditional analysis from facts, and forbid invented motives or blame. Records are explicitly untrusted data. Strict output and runtime validation enforce lengths, safe HTTPS links, original story/source attribution and valid JSON. These safeguards do **not** independently fact-check publishers or guarantee that AI prose is accurate; consult the linked reporting before relying on it.
+
+### Configuration and deployment
+
+Use the same Secrets Manager secret as Artem AI. Its **SecretString must contain only the raw OpenAI API key**, not a JSON object. Keep it in the stack's deployment region and supply its ARN as `OpenAISecretArn`. The news Lambda reads the secret at invocation time, so key rotation is picked up on the next run. Existing chat still resolves the key at deployment and needs redeployment after rotation. A customer-managed KMS key would additionally require `kms:Decrypt` on that exact key; the supplied policy assumes the Secrets Manager AWS-managed key.
+
+The template adds a dedicated news Lambda and execution role, a 14-day log group, Scheduler group/schedule and invocation role, and a five-minute CloudFront cache policy/behavior. It reuses S3, CloudFront and the OpenAI secret. The publisher role can only read that secret, write `news/current.json`, and write to its log group. Scheduler can invoke only the news Lambda, with trust restricted to this account and schedule group. Scheduler uses its execution role, so no public Lambda Function URL, API route or broad resource-based invoke permission is added.
+
+Runtime variables (configured by CloudFormation):
+
+| Variable | Purpose |
+| --- | --- |
+| `NEWS_BUCKET` | Existing private S3 bucket |
+| `OPENAI_SECRET_ARN` | ARN of the existing raw-key secret; no frontend key |
+| `NEWS_OPENAI_MODEL` | Structured-output model; defaults to the site's `gpt-6-luna` |
+| `NEWS_LOOKBACK_HOURS` | Maximum story age; defaults to 72 |
+
+The existing deploy wrapper builds both functions. News files are excluded from static uploads so a website deployment cannot overwrite the live brief with a local preview. Install/configure AWS CLI, AWS SAM CLI, and a compatible Node.js/Make build environment (or Docker with `-UseContainer`), then deploy:
+
+```powershell
+.\scripts\deploy.ps1 `
+  -OpenAISecretArn "arn:aws:secretsmanager:us-west-2:ACCOUNT:secret:heraldic/openai-SUFFIX" `
+  -StackName "heraldic-cloud" -Region "us-west-2" `
+  -CloudFrontCertificateArn "arn:aws:acm:us-east-1:ACCOUNT:certificate/ID" `
+  -NewsScheduleExpression 'cron(0 9 * * ? *)' `
+  -NewsScheduleState ENABLED
+```
+
+AWS/OpenAI charges apply while enabled. `-NewsScheduleState DISABLED` pauses automatic generation; `-NewsOpenAIModel` and `-NewsLookbackHours` adjust generation settings. Edit `news/rss-feeds.json` to change sources, publisher-host allowlists, or explicitly allowed HTTPS redirect hosts, then redeploy. Feed failures are isolated and logged. No HTML scraping or publisher access-control bypass is attempted.
+
+### Manual Lambda test and troubleshooting
+
+Read the deployed function name from the stack, invoke it synchronously, then inspect its response and public snapshot:
+
+```powershell
+$newsFunction = aws cloudformation describe-stacks --stack-name heraldic-cloud --region us-west-2 --query "Stacks[0].Outputs[?OutputKey=='DailyNewsFunctionName'].OutputValue | [0]" --output text
+aws lambda invoke --function-name $newsFunction --region us-west-2 --cli-read-timeout 360 --cli-binary-format raw-in-base64-out --payload '{}' news-result.json
+Get-Content news-result.json
+Invoke-RestMethod 'https://www.heraldic.cloud/news/current.json'
+aws logs tail /heraldic/heraldic-cloud/daily-news --region us-west-2 --since 1h
+```
+
+Check for `FunctionError` even if the CLI exits successfully. Invocation requires `lambda:InvokeFunction`; reading stack outputs/logs requires the corresponding read permissions. Success returns `generated_at` and a headline count. Source/model errors are logged as sanitized codes, not secrets or prompts. Network calls use bounded timeouts/body sizes and retry transient failures. Scheduler retries delivery twice; Lambda automatic execution retries are disabled to avoid multiplying generation costs. Its reserved concurrency is one, timeout five minutes and memory 512 MB. There is no SNS alert or dead-letter archive; monitor CloudWatch Errors/logs and the homepage's freshness notice.
+
+Only a fully validated result is written. No relevant candidates, exhausted OpenAI quota or a refused/invalid response leaves the previous object unchanged. S3 replacement is atomic; if a write times out after S3 accepts it, the object may already contain the new **valid** snapshot, so inspect it rather than assuming the previous version remains. Before the first successful run the module displays its unavailable state. An empty additional-headlines list is supported without publishing an empty featured brief.
+
+`Cache-Control: public, max-age=60, s-maxage=300, must-revalidate` and a maximum 300-second CloudFront TTL make updates visible without daily invalidations. Missing-object errors cache for 10 seconds. The local container serves the same cache headers; S3/CloudFront provide the production snapshot.
+
+For a **local-only** real-data preview using the previously configured `.env` key:
+
+```powershell
+npm run news:generate
+docker compose up --build --detach
+```
+
+This atomically replaces the ignored `public/news/current.json`, makes a billable OpenAI request, and does not publish to AWS. Docker must rebuild to copy a newly generated local file. Do not commit the preview snapshot or credentials.
+
+### SEO, security and verification
+
+The homepage's title/description, Open Graph, X/Twitter and WebPage schema include the brief. Metadata is still prerendered; client navigation now shares that metadata and keeps production canonicals and route-specific images/schema instead of inheriting localhost/preview URLs or the previously visited page. A `WebPageElement` describes the module, not a fabricated Article URL. Daily stories are client-fetched: crawlers that do not run JavaScript see the module heading and description, not its latest stories. Sitemap routes are intentionally unchanged because there are no new pages; `llms.txt` points to the timestamped current snapshot.
+
+The security review retained the restrictive document CSP, hashed JSON-LD (no unsafe-inline), HSTS, nosniff, no-referrer, denied framing/unneeded permissions, HTTPS redirect and TLS 1.2 minimum on the custom domain, private encrypted S3 and signed OAC. It added a restrictive asset/JSON CSP and an S3 insecure-transport deny; corrected invalid CloudFront allowed-method sets; and stopped local clients from spoofing the CloudFront viewer-address header to bypass the chat limiter. CloudFront requires its seven-method set for POST, but the chat handler still accepts **only POST**. `.jpeg` now has the correct MIME type. No cookies, analytics, third-party news widgets or broad CORS were added. News links are validated HTTPS URLs rendered as text with safe new-tab attributes.
+
+`npm run check` covers feed normalization, malformed XML/DTD, filtering, event deduplication, hostile redirects, retry/body bounds, invalid/refused model responses, last-good preservation, S3 publication, and valid/missing/stale React states alongside existing security/SEO regressions. `npm audit` checks the installed dependency graph; use `sam validate --lint` for CloudFormation. These checks are not a penetration test or an OS/container-image vulnerability scan. The existing per-instance chat limiter, privacy notice, chat semantics, DNS/certificate setup and deployment account settings remain unchanged; production-wide abuse prevention would require separate edge/shared controls.

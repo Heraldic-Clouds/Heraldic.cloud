@@ -15,3 +15,5 @@ credentials
 credentials.*
 secrets.*
 terraform.tfstate*
+public/news/current.json
+public/news/current.json.tmp
