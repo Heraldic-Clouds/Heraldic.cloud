@@ -175,13 +175,13 @@ test('browser accepts valid snapshots but rejects unavailable, empty, unsafe and
 const vite = await createServer({ server: { middlewareMode: true, watch: null }, appType: 'custom' });
 after(() => vite.close());
 const { default: FreedomBriefContent } = await vite.ssrLoadModule('/src/components/FreedomBriefContent.jsx');
-test('React presents valid brief, safe source links, empty headlines and an explicit overdue warning', () => {
+test('React presents the featured brief without extra headlines and warns when overdue', () => {
   const html = renderToStaticMarkup(React.createElement(FreedomBriefContent, { snapshot, now }));
   assert.match(html, /<h2[^>]*>AI Freedom Brief/);
   assert.match(html, /<h3[^>]*>European parliament/);
   assert.match(html, /Freedom analysis/);
   assert.match(html, /rel="noopener noreferrer"/);
-  assert.match(html, /No additional relevant headlines/);
+  assert.doesNotMatch(html, /More AI &amp; policy headlines|No additional relevant headlines/);
   assert.doesNotMatch(html, /test-secret|Authorization/);
   const stale = renderToStaticMarkup(React.createElement(FreedomBriefContent, { snapshot, now: now + 48 * 3600000 }));
   assert.match(stale, /not today’s news/);
