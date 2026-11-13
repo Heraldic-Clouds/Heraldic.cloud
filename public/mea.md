@@ -1,6 +1,6 @@
 # Mise En Abyme (MEA)
 
-## New way to use computers
+## MEA levels
 
 Mise En Abyme is a desktop experience shaped by software, hardware, and the web—available from the devices people already use. The page describes cloud desktops using GPUs for everyday work, gaming, and entertainment.
 

@@ -71,7 +71,7 @@ if ($Region) {
 }
 Invoke-Aws $s3SyncArguments
 Invoke-Aws $s3AssetCopyArguments
-foreach ($page in @('index.html', 'heraldic/index.html', 'leadership/index.html', 'mea/index.html', 'media/index.html')) {
+foreach ($page in @('index.html', 'heraldic/index.html', 'leadership/index.html', 'mea/index.html', 'stratus-2/index.html', 'media/index.html')) {
   $pageCopyArguments = @('s3', 'cp', "dist/$page", "s3://$bucketName/$page", '--cache-control', 'public,max-age=0,s-maxage=300,must-revalidate')
   if ($Region) { $pageCopyArguments += @('--region', $Region) }
   Invoke-Aws $pageCopyArguments

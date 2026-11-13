@@ -3,6 +3,7 @@ export const SITE_ORIGIN = 'https://www.heraldic.cloud';
 export const pageMetadata = {
   home: { path: '/', title: 'Heraldic | Humane AI, Business Agents & AI Freedom Brief', description: 'Build humane AI agents and privacy-respecting cloud solutions with Heraldic. Read the daily AI Freedom Brief on AI policy, regulation and open-source development.' },
   mea: { path: '/mea/', title: 'Mise En Abyme (MEA) | Heraldic Cloud Desktop', description: 'Explore Mise En Abyme cloud desktop services for cloud computing, gaming, work, learning and access.' },
+  stratus2: { path: '/stratus-2/', title: 'Stratus-2 | Decentralized Cloud Storage Armed with AI', description: 'Discover Stratus-2, decentralized cloud storage powered by Storj, with AI-assisted file organization and an open-source, tracker-free design.' },
   media: { path: '/media/', title: 'Heraldic Media | MEA Posters & Cloud Desktop Archive', description: 'View Heraldic’s NVIDIA GTC conference posters and cloud desktop, graphics benchmark, and 3D mapping screenshots.' },
   heraldic: { path: '/heraldic/', title: 'Heraldic History | From Cloud Computing to AI', description: 'Explore Heraldic’s history from the 2013 Mise En Abyme cloud desktop idea and early prototypes through NVIDIA GTC research and the company’s transition to AI.' },
   leadership: { path: '/leadership/', title: 'Leadership | Heraldic', description: 'Artem D. is Heraldic’s founder, a computer science graduate, two-time NVIDIA GTC research poster presenter, and CompTIA cloud technology subject matter expert.' },
@@ -11,6 +12,7 @@ export const pageMetadata = {
 const socialImages = {
   home: { name: 'Heraldic', image: 'HERALDIC2026logo.webp', imageAlt: 'Heraldic company logo' },
   mea: { name: 'Mise En Abyme', image: 'mea/miseenabyme.png', imageAlt: 'Mise En Abyme logo' },
+  stratus2: { name: 'Stratus-2', image: 'stratus-2-logo.png', imageAlt: 'Stratus-2 segmented cloud logo' },
   media: { name: 'Media', image: 'media/gtc2018-mea-poster-preview.jpg', imageAlt: 'NVIDIA GTC 2018 Heraldic cloud desktop poster' },
   heraldic: { name: 'About Heraldic', image: 'mea/mea-effect.jpg', imageAlt: 'Early Mise En Abyme cloud-computing concept artwork' },
   leadership: { name: 'Leadership', image: 'mea/profile.jpeg', imageAlt: 'Portrait of Heraldic founder Artem D.' },
@@ -27,6 +29,7 @@ export function pageSchema(page) {
     { '@type': 'WebPage', '@id': url + '#webpage', name: details.title, description: details.description, url, inLanguage: 'en-US', isPartOf: { '@id': SITE_ORIGIN + '/#website' }, about: { '@id': organizationId },
       ...(page === 'home' ? { hasPart: { '@type': 'WebPageElement', '@id': SITE_ORIGIN + '/#ai-freedom-brief', name: 'AI Freedom Brief', description: 'A current daily snapshot of AI policy reporting and clearly labeled AI-written analysis.' } } : {}) },
     ...(page === 'leadership' ? [{ '@type': 'Person', '@id': url + '#artem-d', name: 'Artem D.', image: SITE_ORIGIN + '/mea/profile.jpeg', alumniOf: { '@type': 'CollegeOrUniversity', name: 'Bellevue College' }, worksFor: { '@id': organizationId }, knowsAbout: ['Computer Science', 'Cloud technologies', 'AI governance'] }] : []),
+    ...(page === 'stratus2' ? [{ '@type': 'SoftwareApplication', '@id': url + '#application', name: 'Stratus-2', applicationCategory: 'Cloud Storage', operatingSystem: 'Web', description: details.description, url: 'https://2strat.us/', sameAs: ['https://github.com/Heraldic-Clouds/Stratus-2'], publisher: { '@id': organizationId } }] : []),
     ...(page !== 'home' ? [{ '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Heraldic', item: SITE_ORIGIN + '/' }, { '@type': 'ListItem', position: 2, name: details.name, item: url }] }] : []),
   ] };
 }

@@ -12,11 +12,13 @@ Heraldic’s stated commitments include open-source software, Web3.0 and blockch
 - [Leadership](https://www.heraldic.cloud/leadership/): Biography of founder Artem D.
 - [Media](https://www.heraldic.cloud/media/): Three NVIDIA GTC conference poster images and a 17-image cloud desktop, graphics benchmark, and 3D mapping gallery. No PDF downloads are provided.
 - [Mise En Abyme (MEA)](https://www.heraldic.cloud/mea/): Mise En Abyme cloud desktop services, features, and technology.
+- [Stratus-2](https://www.heraldic.cloud/stratus-2/): Decentralized cloud storage powered by Storj, with AI-assisted file organization and an open-source, tracker-free design.
 - [MEA plain-text reference](https://www.heraldic.cloud/mea.md): Markdown version of the MEA services.
 
 ## Company and project context
 
 - MEA stands for Mise En Abyme. Its page presents a cloud desktop experience that blends software, hardware, and the web.
+- Stratus-2 is a decentralized cloud storage service powered by Storj. Its product site is https://2strat.us/ and source code is available at https://github.com/Heraldic-Clouds/Stratus-2.
 - The MEA page describes cloud desktops for GPU-powered everyday work, gaming, and entertainment; features include adding computing power, helping devices go further, and keeping a familiar desktop.
 - Heraldic's mission is to democratize technology and ensure prosperity for all humanity, and its home page describes building advanced AI agents to automate business tasks.
 - Heraldic's services and goals include cloud computing, business automation, gaming cloud desktops, AI social media, and building AGI.

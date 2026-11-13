@@ -193,9 +193,9 @@ async function chatHandler(event) {
 async function staticHandler(event, method) {
   if (!['GET', 'HEAD'].includes(method)) return { statusCode: 405, headers: { ...securityHeaders, Allow: 'GET, HEAD' }, body: '' };
   const path = event.rawPath || event.path || '/';
-  const redirects = { '/mea': '/mea/', '/mea/index.html': '/mea/', '/media': '/media/', '/media/index.html': '/media/', '/heraldic': '/heraldic/', '/heraldic/index.html': '/heraldic/', '/leadership': '/leadership/', '/leadership/index.html': '/leadership/', '/index.html': '/' };
+  const redirects = { '/mea': '/mea/', '/mea/index.html': '/mea/', '/stratus-2': '/stratus-2/', '/stratus-2/index.html': '/stratus-2/', '/media': '/media/', '/media/index.html': '/media/', '/heraldic': '/heraldic/', '/heraldic/index.html': '/heraldic/', '/leadership': '/leadership/', '/leadership/index.html': '/leadership/', '/index.html': '/' };
   if (Object.hasOwn(redirects, path)) return { statusCode: 308, headers: { ...securityHeaders, Location: redirects[path] }, body: '' };
-  const requested = safePath(['/mea/', '/media/', '/heraldic/', '/leadership/'].includes(path) ? `${path}index.html` : path);
+  const requested = safePath(['/mea/', '/stratus-2/', '/media/', '/heraldic/', '/leadership/'].includes(path) ? `${path}index.html` : path);
   if (!requested) return { statusCode: 400, headers: securityHeaders, body: 'Bad request' };
   const candidate = resolve(distDirectory, requested);
   if (candidate !== distDirectory && !candidate.startsWith(`${distDirectory}${sep}`)) return { statusCode: 400, headers: securityHeaders, body: 'Bad request' };

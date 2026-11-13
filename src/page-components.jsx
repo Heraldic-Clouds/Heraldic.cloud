@@ -3,6 +3,7 @@ import { lazy } from 'react';
 export const pageLoaders = {
   home: () => import('./pages/HomePage.jsx'),
   mea: () => import('./pages/MeaPage.jsx'),
+  stratus2: () => import('./pages/Stratus2Page.jsx'),
   media: () => import('./pages/MediaPage.jsx'),
   heraldic: () => import('./pages/HeraldicPage.jsx'),
   leadership: () => import('./pages/LeadershipPage.jsx'),

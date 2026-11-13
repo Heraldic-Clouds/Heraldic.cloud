@@ -56,7 +56,7 @@ test('malicious and new-page requests cannot reach the model', async () => {
   }
 });
 test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 404', async () => {
-  for (const [path, expected] of [['/', 200], ['/mea/', 200], ['/media/', 200], ['/media', 308], ['/not-a-page', 404], ['/mea', 308], ['/robots.txt', 200], ['/sitemap.xml', 200], ['/mea/mea-art.jpg', 200]]) {
+  for (const [path, expected] of [['/', 200], ['/mea/', 200], ['/stratus-2/', 200], ['/media/', 200], ['/media', 308], ['/not-a-page', 404], ['/mea', 308], ['/stratus-2', 308], ['/robots.txt', 200], ['/sitemap.xml', 200], ['/mea/mea-art.jpg', 200]]) {
     const result = await handler({ rawPath: path, httpMethod: 'GET' });
     assert.equal(result.statusCode, expected, path);
     assert.ok(!Object.keys(result.headers).some(key => key.toLowerCase() === 'set-cookie'));
@@ -82,6 +82,25 @@ test('SEO pages are prerendered, canonical and cookie-free; unknown pages are 40
   assert.match(meaReference, /Add computing power/);
   assert.match(meaReference, /Newbie/);
   assert.doesNotMatch(meaReference, /Welcome To Mise En Abyme|Cloud\+ certified|IPv6|next-gen security/i);
+  const sitemap = (await handler({ rawPath: '/sitemap.xml' })).body;
+  assert.match(sitemap, /https:\/\/www\.heraldic\.cloud\/stratus-2\//);
+  assert.match(llms, /\[Stratus-2\]\(https:\/\/www\.heraldic\.cloud\/stratus-2\/\)/);
+});
+test('Stratus-2 has a prerendered SEO page, safe project links, and a menu item between MEA and Media', async () => {
+  const page = (await handler({ rawPath: '/stratus-2/' })).body;
+  assert.match(page, /<title>Stratus-2 \| Decentralized Cloud Storage Armed with AI<\/title>/);
+  assert.match(page, /rel="canonical" href="https:\/\/www\.heraldic\.cloud\/stratus-2\/"/);
+  assert.match(page, /Stratus-2 stores your data across drives around the world on Storj’s decentralized storage network/);
+  assert.match(page, /Armed with AI for file organization/);
+  assert.match(page, /Open-source and built without third-party analytics trackers/);
+  assert.match(page, /src="\/stratus-2-logo\.png"/);
+  assert.match(page, /href="https:\/\/2strat\.us\/" target="_blank" rel="noopener noreferrer"/);
+  assert.match(page, /href="https:\/\/github\.com\/Heraldic-Clouds\/Stratus-2" target="_blank" rel="noopener noreferrer"/);
+  assert.match(page, /<strong>GitHub<\/strong>/);
+  assert.match(page, /SoftwareApplication/);
+  const home = (await handler({ rawPath: '/' })).body;
+  assert.ok(home.indexOf('href="/mea/"') < home.indexOf('href="/stratus-2/"'));
+  assert.ok(home.indexOf('href="/stratus-2/"') < home.indexOf('href="/media/"'));
 });
 test('mission, media links and removed monitor label are prerendered', async () => {
   const home = (await handler({ rawPath: '/' })).body;
@@ -125,7 +144,8 @@ test('MEA presents current offerings without removed historical graphics', async
   assert.doesNotMatch(mea, /a-plus-certified|cloudplus-certified|mea-art\.jpg/);
   assert.doesNotMatch(mea, /archived rendering|feature statements below preserve|former product lineup|original|legacy/i);
   assert.match(mea, /Mise En Abyme is a desktop experience/);
-  assert.match(mea, /New way to use computers/);
+  assert.match(mea, /MEA levels/);
+  assert.doesNotMatch(mea, /New way to use computers|Our cloud desktops use GPUs, everyday work, gaming and entertainment/);
 });
 test('removed poster PDFs are not served by the site', async () => {
   for (const path of ['/media/GTC2017MEAposter.pdf', '/media/Mise_En_Abyme_Cloud_Primary_personal_Computers.pdf', '/media/GTC2018MEAposter.pdf']) {

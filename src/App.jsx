@@ -203,6 +203,7 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
               <a href="/#overview" aria-current={currentPage === 'home' ? 'page' : undefined}>{copy.overview}</a>
               <div className="nav-menu"><a href="/heraldic/" aria-current={currentPage === 'heraldic' ? 'page' : undefined}>{copy.about}</a><div className="nav-submenu"><a href="/leadership/" aria-current={currentPage === 'leadership' ? 'page' : undefined}>Leadership</a></div></div>
               <a href="/mea/" aria-current={currentPage === 'mea' ? 'page' : undefined}>{copy.meaLabel}</a>
+              <a href="/stratus-2/" aria-current={currentPage === 'stratus2' ? 'page' : undefined}>{copy.stratusLabel}</a>
               <a href="/media/" aria-current={currentPage === 'media' ? 'page' : undefined}>{copy.mediaLabel}</a>
             </nav>
           </header>

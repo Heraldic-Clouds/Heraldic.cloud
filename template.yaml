@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Heraldic website, uncached AI chat, and one scheduled AI Freedom Brief on private S3 and CloudFront.
+Description: Heraldic website, uncached AI chat, and scheduled AI Freedom Brief delivered by CloudFront for the apex and www domains.
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
 Parameters:
   OpenAISecretArn:
     Type: String
@@ -10,7 +13,7 @@ Parameters:
   CloudFrontCertificateArn:
     Type: String
     Default: ''
-    Description: Optional ACM certificate ARN in us-east-1 for www.heraldic.cloud. DNS must point to the distribution after deployment.
+    Description: ACM certificate ARN in us-east-1 covering heraldic.cloud and www.heraldic.cloud.
   NewsScheduleExpression:
     Type: String
     Default: 'cron(0 9 * * ? *)'
@@ -338,6 +341,13 @@ Resources:
 
   HeraldicDistribution:
     Type: AWS::CloudFront::Distribution
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Serve the public site and uncached AI API through one CDN for the apex and www hostnames.
+        must:
+          - Both aliases must be covered by the us-east-1 ACM certificate before deployment.
+          - Point apex DNS to this distribution only after its aliases and certificate are deployed.
+        mutable: change-with-constraints
     Properties:
       DistributionConfig:
         Enabled: true
@@ -345,7 +355,7 @@ Resources:
         HttpVersion: http2and3
         IPV6Enabled: true
         PriceClass: PriceClass_100
-        Aliases: !If [UseCustomDomain, [www.heraldic.cloud], !Ref AWS::NoValue]
+        Aliases: !If [UseCustomDomain, [www.heraldic.cloud, heraldic.cloud], !Ref AWS::NoValue]
         Origins:
           - Id: StaticS3Origin
             DomainName: !GetAtt StaticSiteBucket.RegionalDomainName
@@ -494,7 +504,7 @@ Outputs:
     Description: Website through CloudFront (set the optional certificate and DNS alias for the production hostname).
     Value: !If [UseCustomDomain, 'https://www.heraldic.cloud/', !Sub 'https://${HeraldicDistribution.DomainName}/']
   CloudFrontDomainName:
-    Description: DNS target for the website CDN; point www.heraldic.cloud here when using the custom certificate.
+    Description: DNS target for the website CDN; point the www and apex aliases here after deployment.
     Value: !GetAtt HeraldicDistribution.DomainName
   CloudFrontDistributionId:
     Description: Distribution ID used by the deployment script to invalidate updated content.
