@@ -329,7 +329,7 @@ Resources:
         function handler(event) {
           var request = event.request;
           var uri = request.uri;
-          if (/^\/(mea|media|heraldic|leadership)$/.test(uri)) {
+          if (/^\/(mea|stratus-2|media|heraldic|leadership)$/.test(uri)) {
             return {
               statusCode: 308,
               statusDescription: 'Permanent Redirect',
