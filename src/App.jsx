@@ -56,7 +56,8 @@ export default function App({ page = 'home', PageContent, routePageComponents = 
     } catch { setStorageNotice('This site is not tracking you. Changes last for this visit only. No cookies.'); }
   }, [copy, theme, layout, loaded]);
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 721px)');
+    // Keep the desktop side chat available when a desktop browser is split beside another app.
+    const desktop = window.matchMedia('(min-width: 721px), (min-width: 540px) and (pointer: fine)');
     const syncChatVisibility = () => setChatVisible(desktop.matches);
     syncChatVisibility();
     desktop.addEventListener('change', syncChatVisibility);
