@@ -273,7 +273,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .history-video iframe { display: block; width: min(100%, 52rem); aspect-ratio: 16 / 9; border: 1px solid rgba(43,135,160,.3); border-radius: 8px; background: #061b29; }
 .stratus-page { min-height: 100%; }
 .stratus-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; gap: clamp(1.5rem, 5vw, 4rem); }
-.stratus-logo { display: block; width: 100%; height: auto; border-radius: 14px; background: #050505; }
+.stratus-logo { display: block; width: 100%; height: auto; border-radius: 14px; background: transparent; }
 .stratus-copy h1 { max-width: 14ch; font-size: clamp(2.2rem, 4.4vw, 4rem); line-height: 1.02; letter-spacing: -.045em; }
 .stratus-copy h2 { max-width: 23ch; margin-bottom: 1rem; font-size: clamp(1.35rem, 2.3vw, 2rem); line-height: 1.15; letter-spacing: -.035em; }
 .stratus-copy > p:not(.eyebrow) { max-width: 58ch; color: var(--palette-muted, #426b7e); line-height: 1.7; }
